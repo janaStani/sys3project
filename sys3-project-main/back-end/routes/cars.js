@@ -2,16 +2,14 @@ const express = require('express');
 const cars    = express.Router();
 const DB      = require('../db/dbConn.js');
 
-// Reusable auth check — keeps route handlers focused on their actual logic
-const requireLogin = (req, res) => {
+function requireLogin(req, res) {
     if (!req.session.logged_in) {
         res.status(401).json({ status: { success: false, msg: 'Not logged in' } });
         return false;
     }
     return true;
-};
+}
 
-// GET /cars — fetch all cars belonging to the logged-in user
 cars.get('/', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {
@@ -23,7 +21,6 @@ cars.get('/', async (req, res) => {
     }
 });
 
-// POST /cars — add a new car for the logged-in user
 cars.post('/', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {
@@ -35,25 +32,21 @@ cars.post('/', async (req, res) => {
 
         const result = await DB.addCar(req.session.user.id, make, model, year, type, mileage);
 
-        // Return the full car object so the frontend can add it to state immediately
-        const newCar = {
-            carId:  result.insertId,
+        return res.status(201).json({
+            id:     result.insertId,
             userId: req.session.user.id,
             make,
             model,
             year,
-            style: type,
+            style:  type,
             mileage,
-        };
-
-        return res.status(201).json(newCar);
+        });
     } catch (err) {
         console.error('POST /cars error:', err);
         return res.status(500).json({ status: { success: false, msg: 'Server error' } });
     }
 });
 
-// DELETE /cars/:id — remove a car (ownership verified via userId in the query)
 cars.delete('/:id', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {
@@ -65,7 +58,6 @@ cars.delete('/:id', async (req, res) => {
     }
 });
 
-// POST /cars/:id/scheduled — save the scheduled service data for a car
 cars.post('/:id/scheduled', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {

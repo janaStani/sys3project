@@ -2,7 +2,6 @@ const express   = require('express');
 const providers = express.Router();
 const DB        = require('../db/dbConn.js');
 
-// GET /providers — returns all service providers
 providers.get('/', async (req, res) => {
     try {
         const result = await DB.getProviders();

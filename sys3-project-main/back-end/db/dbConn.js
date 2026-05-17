@@ -11,7 +11,6 @@ const pool = mysql.createPool({
     queueLimit:         0,
 });
 
-// Verify the connection is working on startup
 pool.getConnection((err, connection) => {
     if (err) {
         console.error('DB connection error:', err.message);
@@ -21,7 +20,6 @@ pool.getConnection((err, connection) => {
     connection.release();
 });
 
-// Promisified query helper — keeps all DB methods clean and consistent
 const query = (sql, params) =>
     new Promise((resolve, reject) =>
         pool.query(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)))
@@ -29,27 +27,36 @@ const query = (sql, params) =>
 
 const DB = {};
 
-// Users
-DB.AuthUser       = (username)         => query('SELECT * FROM User1 WHERE username = ?', [username]);
-DB.CheckUserExists = (username, email) => query('SELECT * FROM User1 WHERE username = ? OR email = ?', [username, email]);
-DB.AddUser        = (username, email, password) => query(
-    'INSERT INTO User1 (username, email, password) VALUES (?, ?, ?)',
+// Users — table: User, PK: userId
+DB.AuthUser        = (username)                  => query('SELECT * FROM User WHERE username = ?', [username]);
+DB.CheckUserExists = (username, email)           => query('SELECT * FROM User WHERE username = ? OR email = ?', [username, email]);
+DB.AddUser         = (username, email, password) => query(
+    'INSERT INTO User (username, email, password) VALUES (?, ?, ?)',
     [username, email, password]
 );
 
-// Cars
-DB.getUserCars   = (userId)                           => query('SELECT * FROM Car1 WHERE userId = ?', [userId]);
-DB.addCar        = (userId, make, model, year, type, mileage) => query(
-    'INSERT INTO Car1 (userId, make, model, year, style, mileage) VALUES (?, ?, ?, ?, ?, ?)',
+// Cars — table: Car, PK: carId aliased to id so frontend always uses car.id
+DB.getUserCars = (userId) => query(
+    'SELECT carId AS id, userId, make, model, year, style, mileage, scheduled FROM Car WHERE userId = ?',
+    [userId]
+);
+
+DB.addCar = (userId, make, model, year, type, mileage) => query(
+    'INSERT INTO Car (userId, make, model, year, style, mileage) VALUES (?, ?, ?, ?, ?, ?)',
     [userId, make, model, year, type, mileage]
 );
-DB.deleteCar     = (carId, userId)                    => query('DELETE FROM Car1 WHERE carId = ? AND userId = ?', [carId, userId]);
-DB.saveScheduled = (carId, userId, scheduled)         => query(
-    'UPDATE Car1 SET scheduled = ? WHERE carId = ? AND userId = ?',
+
+DB.deleteCar = (carId, userId) => query(
+    'DELETE FROM Car WHERE carId = ? AND userId = ?',
+    [carId, userId]
+);
+
+DB.saveScheduled = (carId, userId, scheduled) => query(
+    'UPDATE Car SET scheduled = ? WHERE carId = ? AND userId = ?',
     [scheduled, carId, userId]
 );
 
-// Providers
-DB.getProviders  = () => query('SELECT * FROM providers');
+// ServiceProvider — lat/lng not in schema so always returns all providers
+DB.getProviders = () => query('SELECT * FROM ServiceProvider', []);
 
 module.exports = DB;
