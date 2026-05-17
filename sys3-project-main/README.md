@@ -1,14 +1,19 @@
-## Information System: BookFlow
-##  <img src="https://github.com/ATemova/sys3-project/blob/main/html.png" width="30"><img src="https://github.com/ATemova/sys3-project/blob/main/text.png" width="30"><img src="https://github.com/ATemova/sys3-project/blob/main/js.png" width="30"> Systems III Project
+## Information System: Car Care
 
 ### Project Overview
-The Library Management System is a comprehensive software solution designed to modernize and streamline the operations of libraries in various settings, including educational institutions, public libraries, and private collections. The system addresses the many facets of library management, offering a user-friendly interface that caters to the needs of both librarians and library patrons.
+CarCare is a comprehensive vehicle maintenance management platform designed to help car owners stay on top of their vehicle's health. The system addresses all aspects of personal vehicle upkeep — from tracking scheduled services and estimating repair costs to rating mechanics and discovering other vehicles — offering a sleek, intuitive interface built for everyday drivers.
 
 ### Purpose and Goals
-This system aims to transform traditional library management processes into an efficient, digitally-driven workflow. By automating and simplifying key library functions, such as cataloging, circulation, inventory management, and user management, the Library Management System enhances productivity and improves the overall experience for users.
+CarCare aims to replace the guesswork and forgotten service intervals of traditional car ownership with a smart, organized digital dashboard. By providing automated maintenance schedules, cost estimates, and a service calendar, CarCare empowers users to proactively care for their vehicles. The platform also connects owners with mechanics through a community-driven rating system, making it easier to find trusted service providers.
+
+### Key Features
+- **My Garage** — Add and manage multiple vehicles, each with a full maintenance checklist (engine oil, cabin air filter, brakes, and more), health scores, service statuses, and cost estimates.
+- **Service Calendar** — A monthly calendar view of all upcoming and scheduled maintenance events across every vehicle in your garage.
+- **Car Browser** — Browse a catalogue of supported makes and models (BMW, Audi, Mercedes, Volkswagen, Toyota, Ford, and more), filterable by brand, with photos, year, and body type.
+- **Rate a Mechanic** — Search for mechanics or garages by name, leave star ratings, specify the type of job performed, and write detailed reviews to help the community.
 
 ### Technologies Used
-The Library Management System is built using modern web technologies to ensure a seamless and efficient experience for users. The backend is powered by a robust and scalable database management system, ensuring data integrity and security. The frontend is developed with responsive design principles, ensuring the system is accessible across various devices, including desktops, tablets, and mobile phones.
+CarCare is built using modern web technologies. The frontend is developed in **React**, delivering a fast, responsive single-page experience accessible on desktop and mobile. The dark-themed UI is designed for clarity and low eye strain during everyday use. The backend manages vehicle data, maintenance schedules, and user reviews through a structured database, ensuring data integrity and personalized experiences per user.
 
 ### Impact
-By implementing this Library Management System, libraries can greatly enhance their operational efficiency, reduce manual errors, and provide a higher level of service to their patrons. This system not only simplifies the administrative tasks of library staff but also enriches the user experience by offering easy access to a wealth of information and resources.
+By implementing CarCare, vehicle owners gain a centralized hub for all their car maintenance needs — reducing the risk of missed services, unexpected breakdowns, and costly repairs. The mechanic rating system builds community trust, while the structured maintenance schedules and cost previews help users budget and plan ahead with confidence.

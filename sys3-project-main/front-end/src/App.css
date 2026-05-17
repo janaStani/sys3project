@@ -1,44 +1,74 @@
-/* Centers the text in the .App container */
-.App {
-  text-align: center;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Bebas+Neue&display=swap');
+
+#APP {
+  background: #0d0f12;
+  min-height: 100vh;
+  font-family: 'DM Sans', system-ui, sans-serif;
 }
 
-/* Styles the logo image within the .App component */
-.App-logo {
-  height: 40vmin; /* Sets the height of the logo to 40% of the viewport's smaller dimension */
-  pointer-events: none; /* Prevents the logo from being interactive (clickable) */
+.navbar {
+  background-color: #0d0f12;
+  border-bottom: 1px solid #252830;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-/* Applies animation to the .App-logo if the user has not set reduced motion preference */
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear; /* Applies a spinning animation with a duration of 20 seconds, infinitely repeating */
-  }
+.navbar-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.1em;
+  color: #e0a820;
+  text-decoration: none;
+  margin-right: 32px;
 }
 
-/* Styles the header of the .App component */
-.App-header {
-  background-color: #282c34; /* Sets a dark background color */
-  min-height: 100vh; /* Ensures the header takes up at least the full viewport height */
-  display: flex; /* Uses flexbox for layout */
-  flex-direction: column; /* Aligns children in a vertical column */
-  align-items: center; /* Centers children horizontally */
-  justify-content: center; /* Centers children vertically */
-  font-size: calc(10px + 2vmin); /* Responsive font size based on viewport size */
-  color: white; /* Sets text color to white */
+.navbar-links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
 }
 
-/* Styles links within the .App component */
-.App-link {
-  color: #61dafb; /* Sets the link color to a light blue */
+.nav-link {
+  color: #888;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color 0.15s ease;
 }
 
-/* Defines the spinning animation for the .App-logo */
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg); /* Starts the animation with no rotation */
-  }
-  to {
-    transform: rotate(360deg); /* Ends the animation with a full 360-degree rotation */
-  }
+.nav-link:hover {
+  color: #f0f0f0;
+}
+
+.nav-link--danger {
+  color: #e24b4a;
+}
+
+.nav-link--danger:hover {
+  color: #ff6b6b;
+}
+
+.loading-screen {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 14px;
+}
+
+.loading-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 0.1em;
+  color: #e0a820;
+  margin-bottom: 12px;
 }
