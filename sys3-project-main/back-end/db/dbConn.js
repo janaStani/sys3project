@@ -1,70 +1,55 @@
 const mysql = require('mysql2');
+require('dotenv').config();
 
-const conn = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS, 
-    database: 'Qcodeigniter',
-  })
+const pool = mysql.createPool({
+    host:               '127.0.0.1',
+    user:               process.env.DB_USER,
+    password:           process.env.DB_PASS,
+    database:           process.env.DB_DATABASE,
+    waitForConnections: true,
+    connectionLimit:    10,
+    queueLimit:         0,
+});
 
- conn.connect((err) => {
-      if(err){
-          console.log("ERROR: " + err.message);
-          return;    
-      }
-      console.log('Connection established');
-    })
+// Verify the connection is working on startup
+pool.getConnection((err, connection) => {
+    if (err) {
+        console.error('DB connection error:', err.message);
+        return;
+    }
+    console.log('DB connection established');
+    connection.release();
+});
 
+// Promisified query helper — keeps all DB methods clean and consistent
+const query = (sql, params) =>
+    new Promise((resolve, reject) =>
+        pool.query(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)))
+    );
 
-    let dataPool={}
-  
-dataPool.allNovice=()=>{
-  return new Promise ((resolve, reject)=>{
-    conn.query(`SELECT * FROM news`, (err,res)=>{
-      if(err){return reject(err)}
-      return resolve(res)
-    })
-  })
-}
+const DB = {};
 
-dataPool.oneNovica=(id)=>{
-  return new Promise ((resolve, reject)=>{
-    conn.query(`SELECT * FROM news WHERE id = ?`, id, (err,res)=>{
-      if(err){return reject(err)}
-      return resolve(res)
-    })
-  })
-}
+// Users
+DB.AuthUser       = (username)         => query('SELECT * FROM User1 WHERE username = ?', [username]);
+DB.CheckUserExists = (username, email) => query('SELECT * FROM User1 WHERE username = ? OR email = ?', [username, email]);
+DB.AddUser        = (username, email, password) => query(
+    'INSERT INTO User1 (username, email, password) VALUES (?, ?, ?)',
+    [username, email, password]
+);
 
-dataPool.creteNovica=(title,slug,text,file)=>{
-  return new Promise ((resolve, reject)=>{
-    conn.query(`INSERT INTO news (title,slug,text, file) VALUES (?,?,?,?)`, [title, slug, text, file], (err,res)=>{
-      if(err){return reject(err)}
-      return resolve(res)
-    })
-  })
-}
+// Cars
+DB.getUserCars   = (userId)                           => query('SELECT * FROM Car1 WHERE userId = ?', [userId]);
+DB.addCar        = (userId, make, model, year, type, mileage) => query(
+    'INSERT INTO Car1 (userId, make, model, year, style, mileage) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, make, model, year, type, mileage]
+);
+DB.deleteCar     = (carId, userId)                    => query('DELETE FROM Car1 WHERE carId = ? AND userId = ?', [carId, userId]);
+DB.saveScheduled = (carId, userId, scheduled)         => query(
+    'UPDATE Car1 SET scheduled = ? WHERE carId = ? AND userId = ?',
+    [scheduled, carId, userId]
+);
 
-dataPool.AuthUser=(username)=>
-{
-  return new Promise ((resolve, reject)=>{
-    conn.query('SELECT * FROM user_login WHERE user_name = ?', username, (err,res, fields)=>{
-      if(err){return reject(err)}
-      return resolve(res)
-    })
-  })  
-	
-}
+// Providers
+DB.getProviders  = () => query('SELECT * FROM providers');
 
-dataPool.AddUser=(username,email,password)=>{
-  return new Promise ((resolve, reject)=>{
-    conn.query(`INSERT INTO user_login (user_name,user_email,user_password) VALUES (?,?,?)`, [username, email, password], (err,res)=>{
-      if(err){return reject(err)}
-      return resolve(res)
-    })
-  })
-}
-
-
-module.exports = dataPool;
-
+module.exports = DB;
