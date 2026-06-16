@@ -3,6 +3,7 @@ const session      = require('express-session');
 const cors         = require('cors');
 const cookieParser = require('cookie-parser');
 const path         = require('path');
+const fs           = require('fs');
 const jwt          = require('jsonwebtoken');
 
 require('dotenv').config();
@@ -82,12 +83,21 @@ app.use('/cars',       carsRouter);
 app.use('/providers',  providersRouter);
 
 // Serve the React production build
-app.use(express.static(path.join(__dirname, 'build')));
+const frontendBuildPath = path.join(__dirname, '..', 'front-end', 'build');
+const buildPath = frontendBuildPath;
+
+console.log(`Frontend build path: ${buildPath}`);
+if (!fs.existsSync(buildPath)) {
+    console.error(`Frontend build not found at ${buildPath}. Build the frontend first.`);
+    process.exit(1);
+}
+
+app.use(express.static(buildPath));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Catch-all: let React Router handle client-side navigation
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    res.sendFile(path.join(buildPath, 'index.html'));
 });
 
 // Global error handler
