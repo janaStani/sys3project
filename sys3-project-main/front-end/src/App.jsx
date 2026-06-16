@@ -12,10 +12,11 @@ import { API_URL } from "./Utils/Configuration";
 import "./App.css";
 
 const PROTECTED_PAGES = ["MY_CAR", "CAR", "MECHANIC", "HISTORY"];
+const BUILD_MARKER = "CARCARE BUILD v2";
 
 function NavLink({ onClick, children, danger }) {
   return (
-    <a onClick={onClick} href="#" className={`nav-link${danger ? " nav-link--danger" : ""}`}>
+    <a onClick={(e) => { e.preventDefault(); onClick?.(); }} href="#" className={`nav-link${danger ? " nav-link--danger" : ""}`}>
       {children}
     </a>
   );
@@ -23,7 +24,7 @@ function NavLink({ onClick, children, danger }) {
 
 class App extends Component {
   state = {
-    currentPage:    "ABOUT",
+    currentPage:    "MY_CAR",
     user:           null,
     sessionChecked: false,
     cars:           [],
@@ -40,11 +41,11 @@ class App extends Component {
     try {
       const { data } = await axios.get(`${API_URL}/users/session`, { withCredentials:true });
       const user = data.logged_in ? data.user : null;
-      this.setState({ user, sessionChecked:true }, () => {
+      this.setState({ user, sessionChecked:true, currentPage: "MY_CAR" }, () => {
         if (user) this.loadGarage();
       });
     } catch {
-      this.setState({ sessionChecked:true });
+      this.setState({ sessionChecked:true, currentPage: "MY_CAR" });
     }
   };
 
@@ -123,7 +124,7 @@ class App extends Component {
       await axios.get(`${API_URL}/users/logout`, { withCredentials:true });
     } finally {
       this.setState({
-        user:null, currentPage:"ABOUT",
+        user:null, currentPage:"MY_CAR",
         cars:[], allScheduled:{}, garageLoaded:false, garageError:"",
       });
     }
@@ -197,7 +198,10 @@ class App extends Component {
     return (
       <div id="APP">
         <nav className="navbar">
-          <a onClick={() => this.setPage("ABOUT")} href="#" className="navbar-brand">CARCARE</a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <a onClick={() => this.setPage("ABOUT")} href="#" className="navbar-brand">CARCARE</a>
+            <span style={{ fontSize: 12, color: '#999' }}>{BUILD_MARKER}</span>
+          </div>
           <div className="navbar-links">
             {user ? (
               <>
