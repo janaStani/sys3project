@@ -760,7 +760,7 @@ function CarCard({ car, onDelete, scheduled, onToggle, onDate, onComplete, delet
   );
 }
 
-export default function MyCar({
+function MyCar({
   cars, allScheduled, garageLoaded, garageError,
   onAddCar, onDeleteCar, onToggle, onDate, onComplete,
   onClearError,
@@ -880,3 +880,5 @@ export default function MyCar({
     </div>
   );
 }
+
+export default MyCar;
