@@ -1,232 +1,121 @@
 import { useState, useMemo } from "react";
 
-const CARS = [
-  { id: 1,  make: "BMW",        model: "X5",       year: 2023, type: "SUV",        img: "https://cdn.jsdelivr.net/gh/nicholasgasior/car-images@main/bmw-x5.jpg",       color: "#1c69d4" },
-  { id: 2,  make: "BMW",        model: "M3",       year: 2022, type: "Sedan",      img: "",       color: "#1c69d4" },
-  { id: 3,  make: "BMW",        model: "i4",       year: 2024, type: "Electric",   img: "",       color: "#1c69d4" },
-  { id: 4,  make: "Audi",       model: "A4",       year: 2022, type: "Sedan",      img: "",       color: "#bb0a14" },
-  { id: 5,  make: "Audi",       model: "Q5",       year: 2023, type: "SUV",        img: "",       color: "#bb0a14" },
-  { id: 6,  make: "Audi",       model: "R8",       year: 2021, type: "Coupe",      img: "",       color: "#bb0a14" },
-  { id: 7,  make: "Mercedes",   model: "C-Class",  year: 2023, type: "Sedan",      img: "",       color: "#2d2d2d" },
-  { id: 8,  make: "Mercedes",   model: "G-Class",  year: 2022, type: "SUV",        img: "",       color: "#2d2d2d" },
-  { id: 9,  make: "Mercedes",   model: "S-Class",  year: 2024, type: "Sedan",      img: "",       color: "#2d2d2d" },
-  { id: 10, make: "Volkswagen", model: "Golf GTI", year: 2022, type: "Hatchback",  img: "",       color: "#001e50" },
-  { id: 11, make: "Volkswagen", model: "Tiguan",   year: 2023, type: "SUV",        img: "",       color: "#001e50" },
-  { id: 12, make: "Toyota",     model: "Corolla",  year: 2022, type: "Sedan",      img: "",       color: "#eb0a1e" },
-  { id: 13, make: "Toyota",     model: "RAV4",     year: 2023, type: "SUV",        img: "",       color: "#eb0a1e" },
-  { id: 14, make: "Toyota",     model: "Supra",    year: 2023, type: "Coupe",      img: "",       color: "#eb0a1e" },
-  { id: 15, make: "Ford",       model: "Mustang",  year: 2022, type: "Coupe",      img: "",       color: "#003499" },
-  { id: 16, make: "Ford",       model: "Kuga",     year: 2023, type: "SUV",        img: "",       color: "#003499" },
+// General reference data for each car model. `baseYear` is the anchor
+// year the spec numbers below are accurate for; specs for any other
+// selectable year are derived from it in getYearSpecs().
+const CAR_MODELS = [
+  { id: 1,  make: "BMW",        model: "X5",       type: "SUV",       baseYear: 2023, basePower: 380, basePrice: 68000,  fuelType: "Petrol",  engine: "3.0L turbocharged inline-6",          drivetrain: "All-wheel drive (xDrive)",        doors: 5, seats: 5, baseConsumption: 10.5, description: "BMW's flagship mid-size SUV — a blend of luxury, off-road capability and sharp on-road handling." },
+  { id: 2,  make: "BMW",        model: "M3",       type: "Sedan",     baseYear: 2022, basePower: 480, basePrice: 78000,  fuelType: "Petrol",  engine: "3.0L twin-turbo inline-6 (S58)",      drivetrain: "Rear-wheel drive",                doors: 4, seats: 5, baseConsumption: 11.2, description: "The benchmark sports sedan — track-ready performance with everyday usability." },
+  { id: 3,  make: "BMW",        model: "i4",       type: "Electric",  baseYear: 2024, basePower: 340, basePrice: 58000,  fuelType: "Electric", engine: "Single electric motor",              drivetrain: "Rear-wheel drive (eDrive)",       doors: 4, seats: 5, batteryKWh: 80, baseRange: 480, description: "BMW's electric Gran Coupé, pairing combustion-era driving dynamics with a zero-emission drivetrain." },
+  { id: 4,  make: "Audi",       model: "A4",       type: "Sedan",     baseYear: 2022, basePower: 190, basePrice: 46000,  fuelType: "Petrol",  engine: "2.0L turbocharged inline-4",          drivetrain: "Front-wheel drive (quattro optional)", doors: 4, seats: 5, baseConsumption: 7.0,  description: "A compact executive sedan known for understated styling and a refined cabin." },
+  { id: 5,  make: "Audi",       model: "Q5",       type: "SUV",       baseYear: 2023, basePower: 265, basePrice: 52000,  fuelType: "Petrol",  engine: "2.0L turbocharged inline-4",          drivetrain: "All-wheel drive (quattro)",       doors: 5, seats: 5, baseConsumption: 8.6,  description: "A compact luxury SUV balancing comfort, tech and all-weather capability." },
+  { id: 6,  make: "Audi",       model: "R8",       type: "Coupe",     baseYear: 2021, basePower: 570, basePrice: 165000, fuelType: "Petrol",  engine: "5.2L naturally aspirated V10",        drivetrain: "All-wheel drive (quattro)",       doors: 2, seats: 2, baseConsumption: 13.5, description: "Audi's halo supercar — a naturally aspirated V10 in an everyday-usable package." },
+  { id: 7,  make: "Mercedes",   model: "C-Class",  type: "Sedan",     baseYear: 2023, basePower: 255, basePrice: 50000,  fuelType: "Petrol",  engine: "2.0L turbocharged inline-4",          drivetrain: "Rear-wheel drive",                doors: 4, seats: 5, baseConsumption: 7.4,  description: "Mercedes' compact executive sedan, offering S-Class tech in a smaller footprint." },
+  { id: 8,  make: "Mercedes",   model: "G-Class",  type: "SUV",       baseYear: 2022, basePower: 422, basePrice: 145000, fuelType: "Petrol",  engine: "4.0L twin-turbo V8",                  drivetrain: "All-wheel drive (permanent 4MATIC)", doors: 5, seats: 5, baseConsumption: 13.2, description: "An icon of go-anywhere luxury — boxy styling, serious off-road hardware." },
+  { id: 9,  make: "Mercedes",   model: "S-Class",  type: "Sedan",     baseYear: 2024, basePower: 367, basePrice: 118000, fuelType: "Petrol",  engine: "3.0L turbocharged inline-6, mild hybrid", drivetrain: "Rear-wheel drive",            doors: 4, seats: 5, baseConsumption: 8.4,  description: "Mercedes' flagship luxury sedan, setting the benchmark for comfort and in-car technology." },
+  { id: 10, make: "Volkswagen", model: "Golf GTI", type: "Hatchback", baseYear: 2022, basePower: 245, basePrice: 33000,  fuelType: "Petrol",  engine: "2.0L turbocharged inline-4",          drivetrain: "Front-wheel drive",               doors: 5, seats: 5, baseConsumption: 7.6,  description: "The original hot hatch — a practical daily driver with genuine performance credentials." },
+  { id: 11, make: "Volkswagen", model: "Tiguan",   type: "SUV",       baseYear: 2023, basePower: 200, basePrice: 34000,  fuelType: "Petrol",  engine: "2.0L turbocharged inline-4",          drivetrain: "Front-wheel drive (AWD optional)", doors: 5, seats: 5, baseConsumption: 8.1,  description: "A practical compact SUV built for families, with a spacious and well-equipped cabin." },
+  { id: 12, make: "Toyota",     model: "Corolla",  type: "Sedan",     baseYear: 2022, basePower: 122, basePrice: 25000,  fuelType: "Hybrid",  engine: "1.8L hybrid (petrol-electric)",       drivetrain: "Front-wheel drive",               doors: 4, seats: 5, baseConsumption: 4.4,  description: "One of the world's best-selling sedans — efficient, reliable and cheap to run." },
+  { id: 13, make: "Toyota",     model: "RAV4",     type: "SUV",       baseYear: 2023, basePower: 219, basePrice: 32000,  fuelType: "Hybrid",  engine: "2.5L hybrid (petrol-electric)",       drivetrain: "All-wheel drive (E-Four hybrid)", doors: 5, seats: 5, baseConsumption: 5.6,  description: "A hybrid SUV with strong real-world fuel economy and confident all-weather grip." },
+  { id: 14, make: "Toyota",     model: "Supra",    type: "Coupe",     baseYear: 2023, basePower: 382, basePrice: 56000,  fuelType: "Petrol",  engine: "3.0L turbocharged inline-6",          drivetrain: "Rear-wheel drive",                doors: 2, seats: 2, baseConsumption: 8.8,  description: "Toyota's revived sports coupé — a rear-drive grand tourer with sharp handling." },
+  { id: 15, make: "Ford",       model: "Mustang",  type: "Coupe",     baseYear: 2022, basePower: 480, basePrice: 47000,  fuelType: "Petrol",  engine: "5.0L naturally aspirated V8",         drivetrain: "Rear-wheel drive",                doors: 2, seats: 4, baseConsumption: 12.4, description: "America's quintessential muscle car — V8 power and rear-drive theatre." },
+  { id: 16, make: "Ford",       model: "Kuga",     type: "SUV",       baseYear: 2023, basePower: 190, basePrice: 35000,  fuelType: "Hybrid",  engine: "2.5L hybrid (petrol-electric)",       drivetrain: "Front-wheel drive (AWD optional)", doors: 5, seats: 5, baseConsumption: 5.4,  description: "A family-friendly hybrid SUV focused on efficiency and everyday usability." },
 ];
 
-const MAKES = ["All", ...Array.from(new Set(CARS.map(c => c.make))).sort()];
-
 const CAR_IMAGES = {
-  "BMW X5 2023":        "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80",
-  "BMW M3 2022":        "https://images.unsplash.com/photo-1617531653332-bd46c16f3adf?w=800&q=80",
-  "BMW i4 2024":        "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=800&q=80",
-  "Audi A4 2022":       "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&q=80",
-  "Audi Q5 2023":       "https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=800&q=80",
-  "Audi R8 2021":       "https://images.unsplash.com/photo-1563720360172-67b8f3dce741?w=800&q=80",
-  "Mercedes C-Class 2023": "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=80",
-  "Mercedes G-Class 2022": "https://images.unsplash.com/photo-1520031441872-265e4ff70366?w=800&q=80",
-  "Mercedes S-Class 2024": "https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=800&q=80",
-  "Volkswagen Golf GTI 2022": "https://images.unsplash.com/photo-1541443131876-9b69e6e3afab?w=800&q=80",
-  "Volkswagen Tiguan 2023": "https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=800&q=80",
-  "Toyota Corolla 2022": "https://images.unsplash.com/photo-1623869675781-80aa31012a5a?w=800&q=80",
-  "Toyota RAV4 2023":   "https://images.unsplash.com/photo-1568844293986-8d0400bd4745?w=800&q=80",
-  "Toyota Supra 2023":  "https://images.unsplash.com/photo-1632245889029-e406faaa34cd?w=800&q=80",
-  "Ford Mustang 2022":  "https://images.unsplash.com/photo-1584345604476-8ec5f452d1f2?w=800&q=80",
-  "Ford Kuga 2023":     "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80",
+  "BMW X5":            "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80",
+  "BMW M3":            "https://images.unsplash.com/photo-1617531653332-bd46c16f3adf?w=800&q=80",
+  "BMW i4":            "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=800&q=80",
+  "Audi A4":           "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&q=80",
+  "Audi Q5":           "https://images.unsplash.com/photo-1614200179396-2bdb77ebf81b?w=800&q=80",
+  "Audi R8":           "https://images.unsplash.com/photo-1563720360172-67b8f3dce741?w=800&q=80",
+  "Mercedes C-Class":  "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=80",
+  "Mercedes G-Class":  "https://images.unsplash.com/photo-1520031441872-265e4ff70366?w=800&q=80",
+  "Mercedes S-Class":  "https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=800&q=80",
+  "Volkswagen Golf GTI": "https://images.unsplash.com/photo-1541443131876-9b69e6e3afab?w=800&q=80",
+  "Volkswagen Tiguan":   "https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=800&q=80",
+  "Toyota Corolla":    "https://images.unsplash.com/photo-1623869675781-80aa31012a5a?w=800&q=80",
+  "Toyota RAV4":       "https://images.unsplash.com/photo-1568844293986-8d0400bd4745?w=800&q=80",
+  "Toyota Supra":      "https://images.unsplash.com/photo-1632245889029-e406faaa34cd?w=800&q=80",
+  "Ford Mustang":      "https://images.unsplash.com/photo-1584345604476-8ec5f452d1f2?w=800&q=80",
+  "Ford Kuga":         "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80",
 };
 
-function makeMaintenanceItems(car) {
-  const isElectric = car.type === "Electric";
-  const mileage = car.id % 3 === 0 ? 62000 : car.id % 3 === 1 ? 28000 : 14000;
+const MAKES = ["All", ...Array.from(new Set(CAR_MODELS.map(c => c.make))).sort()];
+const YEAR_SPAN = 2; // how many years before/after baseYear are selectable
 
-  return [
-    {
-      id: "oil",
-      category: "Engine",
-      name: isElectric ? "Coolant check" : "Engine oil change",
-      icon: "🛢️",
-      interval: isElectric ? "2 years" : "Every 10,000 km",
-      lastDone: mileage - 7800,
-      dueMileage: mileage + 2200,
-      currentMileage: mileage,
-      status: mileage + 2200 - mileage < 3000 ? "soon" : "ok",
-      note: isElectric ? "Check coolant level and condition" : "Use 5W-30 fully synthetic",
-    },
-    {
-      id: "tires",
-      category: "Wheels",
-      name: "Tyre rotation & pressure",
-      icon: "🔄",
-      interval: "Every 10,000 km",
-      lastDone: mileage - 4100,
-      dueMileage: mileage + 5900,
-      currentMileage: mileage,
-      status: "ok",
-      note: "Check tread depth. Min. 3mm recommended",
-    },
-    {
-      id: "brakes",
-      category: "Brakes",
-      name: "Brake pads & discs",
-      icon: "🔴",
-      interval: "Every 40,000 km",
-      lastDone: mileage - 38000,
-      dueMileage: mileage + 2000,
-      currentMileage: mileage,
-      status: "urgent",
-      note: "Front pads at ~15% remaining. Replace soon!",
-    },
-    {
-      id: "air",
-      category: "Filters",
-      name: "Air filter",
-      icon: "💨",
-      interval: "Every 20,000 km",
-      lastDone: mileage - 9500,
-      dueMileage: mileage + 10500,
-      currentMileage: mileage,
-      status: "ok",
-      note: "Inspect for dust/debris accumulation",
-    },
-    {
-      id: "cabin",
-      category: "Filters",
-      name: "Cabin air filter",
-      icon: "🌬️",
-      interval: "Every 15,000 km",
-      lastDone: mileage - 13100,
-      dueMileage: mileage + 1900,
-      currentMileage: mileage,
-      status: "soon",
-      note: "Affects AC performance and air quality",
-    },
-    {
-      id: "spark",
-      category: "Engine",
-      name: isElectric ? "Battery health check" : "Spark plugs",
-      icon: isElectric ? "⚡" : "✨",
-      interval: isElectric ? "Every year" : "Every 60,000 km",
-      lastDone: mileage - 41000,
-      dueMileage: mileage + 19000,
-      currentMileage: mileage,
-      status: "ok",
-      note: isElectric ? "Check battery cell balance and capacity" : "Iridium plugs recommended",
-    },
-    {
-      id: "fluid",
-      category: "Fluids",
-      name: "Brake fluid",
-      icon: "🧪",
-      interval: "Every 2 years",
-      lastDone: mileage - 21000,
-      dueMileage: mileage + 9000,
-      currentMileage: mileage,
-      status: "ok",
-      note: "DOT 4 required. Absorbs moisture over time",
-    },
-    {
-      id: "battery",
-      category: "Electrical",
-      name: isElectric ? "12V auxiliary battery" : "Car battery",
-      icon: "🔋",
-      interval: "Every 4–5 years",
-      lastDone: mileage - 55000,
-      dueMileage: mileage - 5000,
-      currentMileage: mileage,
-      status: "urgent",
-      note: "Battery showing signs of weakness. Cold-start issues reported.",
-    },
-    {
-      id: "wiper",
-      category: "Visibility",
-      name: "Wiper blades",
-      icon: "🌧️",
-      interval: "Every year",
-      lastDone: mileage - 8000,
-      dueMileage: mileage + 4000,
-      currentMileage: mileage,
-      status: "ok",
-      note: "Check for streaking. Replace before winter",
-    },
-    {
-      id: "trans",
-      category: "Transmission",
-      name: isElectric ? "Motor oil check" : "Transmission fluid",
-      icon: "⚙️",
-      interval: "Every 60,000 km",
-      lastDone: mileage - 12000,
-      dueMileage: mileage + 48000,
-      currentMileage: mileage,
-      status: "ok",
-      note: "Automatic transmission fluid — dealer fill only",
-    },
-  ];
+// Derives plausible specs for any selectable year from a model's base specs.
+function getYearSpecs(model, year) {
+  const diff = year - model.baseYear;
+  const isElectric = model.fuelType === "Electric";
+  const powerStep = isElectric ? 8 : model.fuelType === "Hybrid" ? 4 : 5;
+
+  const power = Math.max(80, Math.round(model.basePower + diff * powerStep));
+  const price = Math.max(15000, Math.round(model.basePrice * (1 + 0.025 * diff)));
+  const zeroToHundred = Math.max(2.5, +(13.5 - power / 45).toFixed(1));
+
+  const efficiency = isElectric
+    ? { label: "Range", value: `${Math.max(150, Math.round((model.baseRange || 400) + diff * 15))} km` }
+    : { label: "Fuel economy", value: `${Math.max(3.5, +(model.baseConsumption - diff * 0.1).toFixed(1))} L/100km` };
+
+  return { diff, power, price, zeroToHundred, efficiency };
 }
 
-const STATUS_META = {
-  urgent: { label: "Overdue",    bg: "#FCEBEB", text: "#A32D2D", border: "#F09595", dot: "#E24B4A" },
-  soon:   { label: "Due soon",   bg: "#FAEEDA", text: "#633806", border: "#EF9F27", dot: "#BA7517" },
-  ok:     { label: "Good",       bg: "#EAF3DE", text: "#27500A", border: "#97C459", dot: "#639922" },
-};
+function getYearHighlight(diff) {
+  if (diff === 0) return "Current model year — specification shown as standard.";
+  if (diff > 0)   return "Projected update — expect refinements to power, efficiency and equipment.";
+  if (diff <= -2) return "Earlier model year — different equipment levels and fewer driver-assist features.";
+  return "Previous model year — minor trim and equipment differences.";
+}
 
-const CATEGORIES = ["All", "Engine", "Brakes", "Wheels", "Filters", "Fluids", "Electrical", "Transmission", "Visibility"];
+function FactItem({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
+      <div style={{ fontSize: 13, color: "#ccc", marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
 
-export default function CarCare() {
-  const [view, setView] = useState("select"); // "select" | "dashboard"
-  const [selectedCar, setSelectedCar] = useState(null);
+function SpecCard({ label, value }) {
+  return (
+    <div className="stat-box">
+      <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "#e0a820" }}>{value}</div>
+    </div>
+  );
+}
+
+export default function CarModels() {
+  const [view, setView] = useState("select"); // "select" | "detail"
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMake, setFilterMake] = useState("All");
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [checkedItems, setCheckedItems] = useState({});
-  const [mileageInput, setMileageInput] = useState("");
   const [imgError, setImgError] = useState(false);
 
-  const filteredCars = useMemo(() => {
-    return CARS.filter(c => {
+  const filteredModels = useMemo(() => {
+    return CAR_MODELS.filter(c => {
       const q = searchQuery.toLowerCase();
-      const matchQ = !q || `${c.make} ${c.model} ${c.year}`.toLowerCase().includes(q);
+      const matchQ = !q || `${c.make} ${c.model}`.toLowerCase().includes(q);
       const matchMake = filterMake === "All" || c.make === filterMake;
       return matchQ && matchMake;
     });
   }, [searchQuery, filterMake]);
 
-  const maintenanceItems = useMemo(() => {
-    if (!selectedCar) return [];
-    return makeMaintenanceItems(selectedCar);
-  }, [selectedCar]);
-
-  const filteredItems = useMemo(() => {
-    if (activeCategory === "All") return maintenanceItems;
-    return maintenanceItems.filter(i => i.category === activeCategory);
-  }, [maintenanceItems, activeCategory]);
-
-  const stats = useMemo(() => {
-    const urgent = maintenanceItems.filter(i => i.status === "urgent").length;
-    const soon = maintenanceItems.filter(i => i.status === "soon").length;
-    const ok = maintenanceItems.filter(i => i.status === "ok").length;
-    return { urgent, soon, ok };
-  }, [maintenanceItems]);
-
-  function handleSelectCar(car) {
-    setSelectedCar(car);
-    setCheckedItems({});
-    setActiveCategory("All");
+  function handleSelectModel(model) {
+    setSelectedModel(model);
+    setSelectedYear(model.baseYear);
     setImgError(false);
-    setMileageInput(String(car.id % 3 === 0 ? 62000 : car.id % 3 === 1 ? 28000 : 14000));
-    setView("dashboard");
+    setView("detail");
   }
 
-  function toggleCheck(id) {
-    setCheckedItems(prev => ({ ...prev, [id]: !prev[id] }));
-  }
+  const specs = useMemo(() => {
+    if (!selectedModel || selectedYear == null) return null;
+    return getYearSpecs(selectedModel, selectedYear);
+  }, [selectedModel, selectedYear]);
 
-  const imgKey = selectedCar ? `${selectedCar.make} ${selectedCar.model} ${selectedCar.year}` : "";
-  const imgSrc = CAR_IMAGES[imgKey] || "";
+  const imgSrc = selectedModel ? CAR_IMAGES[`${selectedModel.make} ${selectedModel.model}`] || "" : "";
 
   if (view === "select") {
     return (
@@ -250,7 +139,7 @@ export default function CarCare() {
               CARCARE
             </div>
             <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
-              Select your vehicle to view your maintenance dashboard
+              Browse general specifications for popular models — pick one to see how specs change by year
             </div>
           </div>
 
@@ -258,7 +147,7 @@ export default function CarCare() {
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: "#555" }}>🔍</span>
             <input
               className="search-in"
-              placeholder="Search make, model or year…"
+              placeholder="Search make or model…"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -271,42 +160,43 @@ export default function CarCare() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-            {filteredCars.map(car => (
-              <div key={car.id} className="car-tile" onClick={() => handleSelectCar(car)}>
+            {filteredModels.map(m => (
+              <div key={m.id} className="car-tile" onClick={() => handleSelectModel(m)}>
                 <div style={{
                   height: 80, borderRadius: 8, marginBottom: 12, overflow: "hidden",
                   background: "#0d0f12", display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  {CAR_IMAGES[`${car.make} ${car.model} ${car.year}`] ? (
+                  {CAR_IMAGES[`${m.make} ${m.model}`] ? (
                     <img
-                      src={CAR_IMAGES[`${car.make} ${car.model} ${car.year}`]}
-                      alt={`${car.make} ${car.model}`}
+                      src={CAR_IMAGES[`${m.make} ${m.model}`]}
+                      alt={`${m.make} ${m.model}`}
                       style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
                       onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
                     />
                   ) : null}
                   <div style={{
-                    display: CAR_IMAGES[`${car.make} ${car.model} ${car.year}`] ? "none" : "flex",
+                    display: CAR_IMAGES[`${m.make} ${m.model}`] ? "none" : "flex",
                     alignItems: "center", justifyContent: "center",
                     fontSize: 32, width: "100%", height: "100%",
                   }}>🚗</div>
                 </div>
-                <div style={{ fontSize: 13, color: "#888", marginBottom: 2 }}>{car.make}</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#f0f0f0" }}>{car.model}</div>
+                <div style={{ fontSize: 13, color: "#888", marginBottom: 2 }}>{m.make}</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#f0f0f0" }}>{m.model}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: "#e0a820", fontWeight: 600 }}>{car.year}</span>
+                  <span style={{ fontSize: 12, color: "#e0a820", fontWeight: 600 }}>{m.basePower} hp</span>
                   <span style={{
                     fontSize: 10, background: "#1e2028", border: "1px solid #2e3040",
                     color: "#888", borderRadius: 20, padding: "2px 8px",
-                  }}>{car.type}</span>
+                  }}>{m.type}</span>
                 </div>
+                <div style={{ fontSize: 11, color: "#555", marginTop: 6 }}>{m.fuelType} · {m.drivetrain}</div>
               </div>
             ))}
           </div>
 
-          {filteredCars.length === 0 && (
+          {filteredModels.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 0", color: "#444", fontSize: 14 }}>
-              No vehicles match your search
+              No models match your search
             </div>
           )}
         </div>
@@ -314,24 +204,20 @@ export default function CarCare() {
     );
   }
 
-  // Dashboard view
-  const car = selectedCar;
+  // Detail view
+  const model = selectedModel;
+  const yearOptions = [];
+  for (let y = model.baseYear - YEAR_SPAN; y <= model.baseYear + YEAR_SPAN; y++) yearOptions.push(y);
+
   return (
     <div style={{ fontFamily: "'DM Sans', system-ui, sans-serif", minHeight: "100vh", background: "#0d0f12", color: "#f0f0f0" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #1a1c21; } ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        .cat-btn { background: #16181e; border: 1px solid #252830; border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; color: #888; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
-        .cat-btn.active { background: #e0a820; border-color: #e0a820; color: #0d0f12; font-weight: 600; }
-        .maint-card { background: #16181e; border: 1px solid #252830; border-radius: 12px; padding: 16px; transition: border-color 0.15s; }
-        .maint-card:hover { border-color: #333; }
-        .maint-card.done { opacity: 0.45; }
-        .check-btn { border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
-        .check-btn:active { transform: scale(0.96); }
-        .stat-box { background: #16181e; border: 1px solid #252830; border-radius: 10px; padding: 14px 16px; flex: 1; }
-        .mile-input { background: #16181e; border: 1px solid #252830; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #f0f0f0; outline: none; font-family: inherit; width: 120px; }
-        .mile-input:focus { border-color: #e0a820; }
+        .stat-box { background: #16181e; border: 1px solid #252830; border-radius: 10px; padding: 14px 16px; }
+        .year-chip { background: #16181e; border: 1px solid #252830; border-radius: 20px; padding: 7px 16px; font-size: 13px; cursor: pointer; color: #888; transition: all 0.15s; font-family: inherit; }
+        .year-chip.active { background: #e0a820; border-color: #e0a820; color: #0d0f12; font-weight: 700; }
         .back-btn { background: none; border: 1px solid #252830; border-radius: 8px; padding: 8px 14px; color: #888; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
         .back-btn:hover { border-color: #e0a820; color: #e0a820; }
       `}</style>
@@ -344,11 +230,11 @@ export default function CarCare() {
             CARCARE
           </div>
           <button className="back-btn" onClick={() => setView("select")}>
-            ← Change vehicle
+            ← Browse all models
           </button>
         </div>
 
-        {/* Car hero */}
+        {/* Model hero */}
         <div style={{
           background: "#16181e", border: "1px solid #252830", borderRadius: 16,
           overflow: "hidden", marginBottom: 20,
@@ -358,7 +244,7 @@ export default function CarCare() {
             {imgSrc && !imgError ? (
               <img
                 src={imgSrc}
-                alt={`${car.make} ${car.model}`}
+                alt={`${model.make} ${model.model}`}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: 180 }}
                 onError={() => setImgError(true)}
               />
@@ -375,164 +261,61 @@ export default function CarCare() {
               padding: "20px 16px 12px",
             }}>
               <div style={{ fontSize: 11, color: "#e0a820", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                {car.type}
+                {model.type}
               </div>
             </div>
           </div>
 
           <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>{car.make}</div>
+              <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>{model.make}</div>
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, letterSpacing: "0.04em", color: "#f0f0f0", lineHeight: 1 }}>
-                {car.model}
+                {model.model}
               </div>
-              <div style={{ fontSize: 20, color: "#e0a820", fontWeight: 600, marginTop: 4 }}>{car.year}</div>
+              <div style={{ fontSize: 13, color: "#888", marginTop: 10, lineHeight: 1.6 }}>{model.description}</div>
             </div>
 
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 11, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Current mileage
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  className="mile-input"
-                  type="number"
-                  value={mileageInput}
-                  onChange={e => setMileageInput(e.target.value)}
-                />
-                <span style={{ fontSize: 13, color: "#666" }}>km</span>
-              </div>
-            </div>
-
-            {/* Urgency stats */}
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              {stats.urgent > 0 && (
-                <div style={{ background: "#2a1010", border: "1px solid #5a1a1a", borderRadius: 8, padding: "6px 10px", fontSize: 12 }}>
-                  <span style={{ color: "#E24B4A", fontWeight: 600 }}>{stats.urgent}</span>
-                  <span style={{ color: "#a06060", marginLeft: 4 }}>overdue</span>
-                </div>
-              )}
-              {stats.soon > 0 && (
-                <div style={{ background: "#241c0a", border: "1px solid #5a420a", borderRadius: 8, padding: "6px 10px", fontSize: 12 }}>
-                  <span style={{ color: "#EF9F27", fontWeight: 600 }}>{stats.soon}</span>
-                  <span style={{ color: "#8a7040", marginLeft: 4 }}>due soon</span>
-                </div>
-              )}
-              <div style={{ background: "#0e1e0a", border: "1px solid #1a4a0a", borderRadius: 8, padding: "6px 10px", fontSize: 12 }}>
-                <span style={{ color: "#639922", fontWeight: 600 }}>{stats.ok}</span>
-                <span style={{ color: "#4a6a20", marginLeft: 4 }}>good</span>
-              </div>
+            <div style={{ display: "flex", gap: 18, marginTop: 16, flexWrap: "wrap" }}>
+              <FactItem label="Engine" value={model.engine} />
+              <FactItem label="Drivetrain" value={model.drivetrain} />
+              <FactItem label="Doors / Seats" value={`${model.doors} / ${model.seats}`} />
+              {model.batteryKWh && <FactItem label="Battery" value={`${model.batteryKWh} kWh`} />}
             </div>
           </div>
         </div>
 
-        {/* Category filter */}
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 10, marginBottom: 16 }}>
-          {CATEGORIES.map(cat => (
-            <button key={cat} className={`cat-btn${activeCategory === cat ? " active" : ""}`} onClick={() => setActiveCategory(cat)}>
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ fontSize: 12, color: "#555", marginBottom: 14 }}>
-          {filteredItems.length} maintenance item{filteredItems.length !== 1 ? "s" : ""}
-          {Object.values(checkedItems).filter(Boolean).length > 0 &&
-            ` · ${Object.values(checkedItems).filter(Boolean).length} marked done`}
-        </div>
-
-        {/* Maintenance cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filteredItems.map(item => {
-            const s = STATUS_META[item.status];
-            const done = !!checkedItems[item.id];
-            const kmLeft = item.dueMileage - item.currentMileage;
-
-            return (
-              <div key={item.id} className={`maint-card${done ? " done" : ""}`}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                  <div style={{ fontSize: 28, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{item.icon}</div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: "#f0f0f0" }}>{item.name}</span>
-                      <span style={{
-                        fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
-                        background: s.bg, color: s.text, border: `1px solid ${s.border}`,
-                      }}>{s.label}</span>
-                      <span style={{ fontSize: 10, color: "#555", background: "#1a1c22", border: "1px solid #252830", borderRadius: 20, padding: "2px 8px" }}>
-                        {item.category}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{item.note}</div>
-
-                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.08em" }}>Interval</div>
-                        <div style={{ fontSize: 12, color: "#aaa", marginTop: 1 }}>{item.interval}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.08em" }}>Last done</div>
-                        <div style={{ fontSize: 12, color: "#aaa", marginTop: 1 }}>{item.lastDone.toLocaleString()} km</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                          {kmLeft < 0 ? "Overdue by" : "Due in"}
-                        </div>
-                        <div style={{ fontSize: 12, fontWeight: 600, marginTop: 1, color: item.status === "urgent" ? "#E24B4A" : item.status === "soon" ? "#EF9F27" : "#639922" }}>
-                          {Math.abs(kmLeft).toLocaleString()} km
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div style={{ marginTop: 10, height: 3, borderRadius: 2, background: "#252830", overflow: "hidden" }}>
-                      <div style={{
-                        height: "100%",
-                        width: `${Math.min(100, Math.max(0, ((item.currentMileage - item.lastDone) / (item.dueMileage - item.lastDone)) * 100))}%`,
-                        background: item.status === "urgent" ? "#E24B4A" : item.status === "soon" ? "#EF9F27" : "#639922",
-                        borderRadius: 2, transition: "width 0.4s",
-                      }} />
-                    </div>
-                  </div>
-
-                  <button
-                    className="check-btn"
-                    style={{
-                      background: done ? "#1a1c22" : item.status === "urgent" ? "#E24B4A" : item.status === "soon" ? "#BA7517" : "#3B6D11",
-                      color: done ? "#555" : "#fff",
-                      flexShrink: 0,
-                    }}
-                    onClick={() => toggleCheck(item.id)}
-                  >
-                    {done ? "✓ Done" : "Mark done"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Summary footer */}
-        {Object.values(checkedItems).filter(Boolean).length > 0 && (
-          <div style={{
-            marginTop: 20, background: "#0e1e0a", border: "1px solid #1a4a0a",
-            borderRadius: 10, padding: "14px 16px",
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-          }}>
-            <div style={{ fontSize: 13, color: "#639922" }}>
-              ✓ {Object.values(checkedItems).filter(Boolean).length} item{Object.values(checkedItems).filter(Boolean).length > 1 ? "s" : ""} marked as serviced
-            </div>
-            <button
-              className="check-btn"
-              style={{ background: "#1e2028", color: "#888", border: "1px solid #252830" }}
-              onClick={() => setCheckedItems({})}
-            >
-              Reset all
-            </button>
+        {/* Year selector */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+            Model year — change it to see updated specs
           </div>
-        )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {yearOptions.map(y => (
+              <button
+                key={y}
+                className={`year-chip${selectedYear === y ? " active" : ""}`}
+                onClick={() => setSelectedYear(y)}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Specs for the selected year */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
+          <SpecCard label="Power" value={`${specs.power} hp`} />
+          <SpecCard label="0–100 km/h" value={`${specs.zeroToHundred}s`} />
+          <SpecCard label="Starting price" value={`€${specs.price.toLocaleString()}`} />
+          <SpecCard label={specs.efficiency.label} value={specs.efficiency.value} />
+        </div>
+
+        {/* What's different this year */}
+        <div style={{ background: "#16181e", border: "1px solid #252830", borderRadius: 12, padding: "14px 16px", fontSize: 13, color: "#aaa", lineHeight: 1.6 }}>
+          <strong style={{ color: "#e0a820" }}>{selectedYear} {model.make} {model.model}: </strong>
+          {getYearHighlight(specs.diff)}
+        </div>
+
       </div>
     </div>
   );
