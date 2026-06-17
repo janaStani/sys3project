@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import axiosAuth from "../Utils/axiosAuth";
 import { API_URL } from "../Utils/Configuration";
-import { CAR_MODELS } from "./car";
+import { CAR_MODELS, YEAR_SPAN } from "./car";
 
 const MAKES = ["BMW","Mercedes","Audi","Volkswagen","Toyota","Ford","Honda","Hyundai","Kia","Mazda","Peugeot","Renault","Fiat","Volvo","Skoda","Seat","Opel","Nissan","Subaru","Lexus","Other"];
 const TYPES = ["Sedan","SUV","Hatchback","Coupe","Estate","Convertible","Van","Pickup","Electric","Hybrid"];
@@ -104,8 +104,22 @@ function AddCarModal({ onAdd, onClose, saving }) {
     car =>
       car.make === form.make &&
       car.model === form.model &&
-      car.year === parseInt(form.year)
+      String(car.baseYear) === String(form.year)
+  ) || CAR_MODELS.find(
+    car => car.make === form.make && car.model === form.model
   );
+
+  const modelYears = [...new Set(
+    availableModels
+      .filter(c => c.model === form.model)
+      .map(c => c.baseYear)
+  )].sort((a, b) => a - b);
+
+  const yearOptions = modelYears.length > 1
+    ? modelYears
+    : selectedCar
+      ? Array.from({ length: YEAR_SPAN * 2 + 1 }, (_, i) => selectedCar.baseYear - YEAR_SPAN + i)
+      : [];
 
   function setField(key, value) {
     setForm(f => ({
@@ -130,7 +144,7 @@ function AddCarModal({ onAdd, onClose, saving }) {
       model: selectedCar.model,
       type: selectedCar.type,
       fuelType: selectedCar.fuelType,
-      year: selectedCar.year,
+      year: parseInt(form.year) || selectedCar.baseYear,
       mileage: parseInt(form.mileage),
     });
   }
@@ -247,18 +261,14 @@ function AddCarModal({ onAdd, onClose, saving }) {
                 Select year
               </option>
 
-              {availableModels
-                .filter(
-                  c => c.model === form.model
-                )
-                .map(car => (
-                  <option
-                    key={car.id}
-                    value={car.year}
-                  >
-                    {car.year}
-                  </option>
-                ))}
+              {yearOptions.map(year => (
+                <option
+                  key={year}
+                  value={year}
+                >
+                  {year}
+                </option>
+              ))}
             </select>
           </Field>
 

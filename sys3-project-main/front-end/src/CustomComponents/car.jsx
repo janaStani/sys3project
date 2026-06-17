@@ -22,6 +22,8 @@ export const CAR_MODELS = [
   { id: 16, make: "Ford",       model: "Kuga",     type: "SUV",       baseYear: 2023, basePower: 190, basePrice: 35000,  fuelType: "Hybrid",  engine: "2.5L hybrid (petrol-electric)",       drivetrain: "Front-wheel drive (AWD optional)", doors: 5, seats: 5, baseConsumption: 5.4,  description: "A family-friendly hybrid SUV focused on efficiency and everyday usability." },
 ];
 
+export const YEAR_SPAN = 2;
+
 const CAR_IMAGES = {
   "BMW X5":            "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80",
   "BMW M3":            "https://images.unsplash.com/photo-1617531653332-bd46c16f3adf?w=800&q=80",
@@ -42,7 +44,6 @@ const CAR_IMAGES = {
 };
 
 const MAKES = ["All", ...Array.from(new Set(CAR_MODELS.map(c => c.make))).sort()];
-const YEAR_SPAN = 2; // how many years before/after baseYear are selectable
 
 // Derives plausible specs for any selectable year from a model's base specs.
 function getYearSpecs(model, year) {
