@@ -6,7 +6,7 @@ class SignupView extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            fields:       { username: "", email: "", password: "", name: "", surname: "" },
+            fields:       { username: "", email: "", password: "", name: "", surname: "", zipcode: "" },
             status:       { success: null, msg: "" },
             loading:      false,
             showPassword: false,
@@ -22,9 +22,9 @@ class SignupView extends React.Component {
     };
 
     submit = async () => {
-        const { username, email, password, name, surname } = this.state.fields;
+        const { username, email, password, name, surname, zipcode } = this.state.fields;
 
-        if (!username || !email || !password || !name || !surname) {
+        if (!username || !email || !password || !name || !surname || !zipcode) {
             this.setState({ status: { success: false, msg: "Please fill in all fields." } });
             return;
         }
@@ -38,7 +38,7 @@ class SignupView extends React.Component {
         try {
             const res = await axios.post(
                 `${API_URL}/users/register`,
-                { username, email, password, name, surname },
+                { username, email, password, name, surname, zipcode },
                 { withCredentials: true }
             );
 
@@ -76,6 +76,10 @@ class SignupView extends React.Component {
                             <label style={S.label}>Surname</label>
                             <input name="surname" value={fields.surname} onChange={this.handleField} onKeyDown={this.handleKeyDown} type="text" placeholder="Novak" style={S.input} />
                         </div>
+                    </div>
+                    <div style={S.fieldWrap}>
+                        <label style={S.label}>Zipcode</label>
+                        <input name="zipcode" value={fields.zipcode} onChange={this.handleField} onKeyDown={this.handleKeyDown} type="text" placeholder="1000" style={S.input} />
                     </div>
 
                     <div style={S.fieldWrap}>
