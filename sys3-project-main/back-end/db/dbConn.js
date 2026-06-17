@@ -31,9 +31,9 @@ const DB = {};
 // Users — table: User, PK: userId
 DB.AuthUser        = (username)                  => query('SELECT * FROM User WHERE username = ?', [username]);
 DB.CheckUserExists = (username, email)           => query('SELECT * FROM User WHERE username = ? OR email = ?', [username, email]);
-DB.AddUser         = (username, email, password) => query(
-    'INSERT INTO User (username, email, password) VALUES (?, ?, ?)',
-    [username, email, password]
+DB.AddUser         = (username, email, password, name, surname, zipcode) => query(
+    'INSERT INTO User (username, email, password, name, surname, zipcode) VALUES (?, ?, ?, ?, ?, ?)',
+    [username, email, password, name, surname, zipcode]
 );
 
 // Cars — table: Car, PK: carId aliased to id so frontend always uses car.id

@@ -72,9 +72,9 @@ users.post('/login', async (req, res) => {
 // POST /users/register
 users.post('/register', async (req, res) => {
     try {
-        const { username, password, email } = req.body;
+        const { username, password, email, name, surname, zipcode } = req.body;
 
-        if (!username || !password || !email) {
+        if (!username || !password || !email || !name || !surname || !zipcode) {
             return res.status(400).json({
                 status: { success: false, msg: 'All fields are required' },
             });
@@ -88,7 +88,7 @@ users.post('/register', async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-        const result = await DB.AddUser(username, email, hashedPassword);
+        const result = await DB.AddUser(username, email, hashedPassword, name, surname, zipcode);
 
         if (result.affectedRows) {
             return res.status(201).json({
