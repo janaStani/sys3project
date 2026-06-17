@@ -4,6 +4,9 @@ node_modules/
 # Environment variables — never commit this
 .env
 
+# Local SQLite database file
+/db/local.db
+
 # Uploaded files
 uploads/
 
