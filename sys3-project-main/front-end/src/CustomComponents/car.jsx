@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 // General reference data for each car model. `baseYear` is the anchor
 // year the spec numbers below are accurate for; specs for any other
 // selectable year are derived from it in getYearSpecs().
-const CAR_MODELS = [
+export const CAR_MODELS = [
   { id: 1,  make: "BMW",        model: "X5",       type: "SUV",       baseYear: 2023, basePower: 380, basePrice: 68000,  fuelType: "Petrol",  engine: "3.0L turbocharged inline-6",          drivetrain: "All-wheel drive (xDrive)",        doors: 5, seats: 5, baseConsumption: 10.5, description: "BMW's flagship mid-size SUV — a blend of luxury, off-road capability and sharp on-road handling." },
   { id: 2,  make: "BMW",        model: "M3",       type: "Sedan",     baseYear: 2022, basePower: 480, basePrice: 78000,  fuelType: "Petrol",  engine: "3.0L twin-turbo inline-6 (S58)",      drivetrain: "Rear-wheel drive",                doors: 4, seats: 5, baseConsumption: 11.2, description: "The benchmark sports sedan — track-ready performance with everyday usability." },
   { id: 3,  make: "BMW",        model: "i4",       type: "Electric",  baseYear: 2024, basePower: 340, basePrice: 58000,  fuelType: "Electric", engine: "Single electric motor",              drivetrain: "Rear-wheel drive (eDrive)",       doors: 4, seats: 5, batteryKWh: 80, baseRange: 480, description: "BMW's electric Gran Coupé, pairing combustion-era driving dynamics with a zero-emission drivetrain." },
