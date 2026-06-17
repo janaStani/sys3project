@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import axiosAuth from "../Utils/axiosAuth";
 import { API_URL } from "../Utils/Configuration";
-import { CAR_MODELS } from "./CarModels";
+import { CAR_MODELS } from "./car";
 
 const MAKES = ["BMW","Mercedes","Audi","Volkswagen","Toyota","Ford","Honda","Hyundai","Kia","Mazda","Peugeot","Renault","Fiat","Volvo","Skoda","Seat","Opel","Nissan","Subaru","Lexus","Other"];
 const TYPES = ["Sedan","SUV","Hatchback","Coupe","Estate","Convertible","Van","Pickup","Electric","Hybrid"];
