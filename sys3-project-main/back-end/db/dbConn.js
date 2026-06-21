@@ -34,6 +34,7 @@ if (DB_TYPE === 'sqlite') {
             year INTEGER NOT NULL,
             model TEXT NOT NULL,
             style TEXT,
+            fuelType TEXT,
             mileage INTEGER DEFAULT 0,
             make TEXT NOT NULL,
             scheduled TEXT DEFAULT '{}',
@@ -48,6 +49,23 @@ if (DB_TYPE === 'sqlite') {
             rating REAL,
             location TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS ServiceLog (
+            logId INTEGER PRIMARY KEY AUTOINCREMENT,
+            carId INTEGER NOT NULL,
+            userId INTEGER NOT NULL,
+            serviceId TEXT NOT NULL,      -- e.g. "oil", "brakes"
+            serviceName TEXT NOT NULL,    -- snapshot, in case definitions change later
+            category TEXT,
+            mileageAt INTEGER NOT NULL,   -- car's mileage when service was performed
+            date TEXT NOT NULL,           -- ISO date string
+            costMin INTEGER,
+            costMax INTEGER,
+            notes TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(carId) REFERENCES Car(carId) ON DELETE CASCADE
+        );
+
     `);
 
     const insertProvider = sqlite.prepare(
@@ -108,13 +126,13 @@ DB.AddUser         = (username, email, password, name, surname, zipcode) => quer
 
 // Cars — table: Car, PK: carId aliased to id so frontend always uses car.id
 DB.getUserCars = (userId) => query(
-    'SELECT carId AS id, userId, make, model, year, style, mileage, scheduled FROM Car WHERE userId = ?',
+    'SELECT carId AS id, userId, make, model, year, style, fuelType, mileage, scheduled FROM Car WHERE userId = ?',
     [userId]
 );
 
-DB.addCar = (userId, make, model, year, type, mileage) => query(
-    'INSERT INTO Car (userId, make, model, year, style, mileage) VALUES (?, ?, ?, ?, ?, ?)',
-    [userId, make, model, year, type, mileage]
+DB.addCar = (userId, make, model, year, type, mileage, fuelType) => query(
+    'INSERT INTO Car (userId, make, model, year, style, mileage, fuelType) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [userId, make, model, year, type, mileage, fuelType]
 );
 
 DB.deleteCar = (carId, userId) => query(
@@ -129,5 +147,26 @@ DB.saveScheduled = (carId, userId, scheduled) => query(
 
 // ServiceProvider — lat/lng not in schema so always returns all providers
 DB.getProviders = () => query('SELECT * FROM ServiceProvider', []);
+
+DB.addServiceLog = (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax) => query(
+    `INSERT INTO ServiceLog (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax]
+);
+
+DB.getCarServiceLog = (carId, userId) => query(
+    'SELECT * FROM ServiceLog WHERE carId = ? AND userId = ? ORDER BY date DESC, logId DESC',
+    [carId, userId]
+);
+
+DB.getUserServiceLog = (userId) => query(
+    'SELECT * FROM ServiceLog WHERE userId = ? ORDER BY date DESC, logId DESC',
+    [userId]
+);
+
+DB.deleteServiceLog = (logId, userId) => query(
+    'DELETE FROM ServiceLog WHERE logId = ? AND userId = ?',
+    [logId, userId]
+);
 
 module.exports = DB;
