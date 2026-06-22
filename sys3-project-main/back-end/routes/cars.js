@@ -97,14 +97,23 @@ cars.get('/service-log', async (req, res) => {
 });
 
 cars.delete('/:id/service-log/:logId', async (req, res) => {
-    if (!requireLogin(req, res)) return;
-    try {
-        await DB.deleteServiceLog(req.params.logId, req.session.user.id);
-        return res.status(200).json({ status: { success: true } });
-    } catch (err) {
-        console.error('DELETE /cars/:id/service-log/:logId error:', err);
-        return res.status(500).json({ status: { success: false, msg: 'Server error' } });
+    const result = await DB.deleteServiceLog(
+        req.params.logId,
+        req.session.user.id
+    );
+
+    if (result.affectedRows === 0) {
+        return res.status(404).json({
+            status: {
+                success: false,
+                msg: "Service log not found"
+            }
+        });
     }
+
+    return res.status(200).json({
+        status: { success: true }
+    });
 });
 
 module.exports = cars;

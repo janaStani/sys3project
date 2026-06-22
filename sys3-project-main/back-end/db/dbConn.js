@@ -66,6 +66,18 @@ if (DB_TYPE === 'sqlite') {
             FOREIGN KEY(carId) REFERENCES Car(carId) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS Review (
+            reviewId INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER NOT NULL,
+            mechanicId TEXT NOT NULL,
+            mechanicName TEXT NOT NULL,
+            rating INTEGER NOT NULL,
+            comment TEXT NOT NULL,
+            jobType TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(userId) REFERENCES User(userId) ON DELETE CASCADE
+        );
+
     `);
 
     const insertProvider = sqlite.prepare(
@@ -114,59 +126,79 @@ if (DB_TYPE === 'sqlite') {
         new Promise((resolve, reject) =>
             pool.query(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)))
         );
-}
+    }
 
-// Users — table: User, PK: userId
-DB.AuthUser        = (username)                  => query('SELECT * FROM User WHERE username = ?', [username]);
-DB.CheckUserExists = (username, email)           => query('SELECT * FROM User WHERE username = ? OR email = ?', [username, email]);
-DB.AddUser         = (username, email, password, name, surname, zipcode) => query(
-    'INSERT INTO User (username, email, password, name, surname, zipcode) VALUES (?, ?, ?, ?, ?, ?)',
-    [username, email, password, name, surname, zipcode]
-);
+    // Users — table: User, PK: userId
+    DB.AuthUser        = (username)                  => query('SELECT * FROM User WHERE username = ?', [username]);
+    DB.CheckUserExists = (username, email)           => query('SELECT * FROM User WHERE username = ? OR email = ?', [username, email]);
+    DB.AddUser         = (username, email, password, name, surname, zipcode) => query(
+        'INSERT INTO User (username, email, password, name, surname, zipcode) VALUES (?, ?, ?, ?, ?, ?)',
+        [username, email, password, name, surname, zipcode]
+    );
 
-// Cars — table: Car, PK: carId aliased to id so frontend always uses car.id
-DB.getUserCars = (userId) => query(
-    'SELECT carId AS id, userId, make, model, year, style, fuelType, mileage, scheduled FROM Car WHERE userId = ?',
+    // Cars — table: Car, PK: carId aliased to id so frontend always uses car.id
+    DB.getUserCars = (userId) => query(
+        'SELECT carId AS id, userId, make, model, year, style, fuelType, mileage, scheduled FROM Car WHERE userId = ?',
+        [userId]
+    );
+
+    DB.addCar = (userId, make, model, year, type, mileage, fuelType) => query(
+        'INSERT INTO Car (userId, make, model, year, style, mileage, fuelType) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userId, make, model, year, type, mileage, fuelType]
+    );
+
+    DB.deleteCar = (carId, userId) => query(
+        'DELETE FROM Car WHERE carId = ? AND userId = ?',
+        [carId, userId]
+    );
+
+    DB.saveScheduled = (carId, userId, scheduled) => query(
+        'UPDATE Car SET scheduled = ? WHERE carId = ? AND userId = ?',
+        [scheduled, carId, userId]
+    );
+
+    // ServiceProvider — lat/lng not in schema so always returns all providers
+    DB.getProviders = () => query('SELECT * FROM ServiceProvider', []);
+
+    DB.addServiceLog = (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax) => query(
+        `INSERT INTO ServiceLog (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax]
+    );
+
+    DB.getCarServiceLog = (carId, userId) => query(
+        'SELECT * FROM ServiceLog WHERE carId = ? AND userId = ? ORDER BY date DESC, logId DESC',
+        [carId, userId]
+    );
+
+    DB.getUserServiceLog = (userId) => query(
+        'SELECT * FROM ServiceLog WHERE userId = ? ORDER BY date DESC, logId DESC',
+        [userId]
+    );
+
+    DB.deleteServiceLog = (logId, userId) => query(
+        'DELETE FROM ServiceLog WHERE logId = ? AND userId = ?',
+        [logId, userId]
+    );
+
+    DB.getReviews = (userId) => query(
+    'SELECT reviewId AS id, userId, mechanicId, mechanicName, rating, comment, jobType, createdAt FROM Review WHERE userId = ? ORDER BY createdAt DESC',
     [userId]
 );
 
-DB.addCar = (userId, make, model, year, type, mileage, fuelType) => query(
-    'INSERT INTO Car (userId, make, model, year, style, mileage, fuelType) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [userId, make, model, year, type, mileage, fuelType]
+DB.addReview = (userId, mechanicId, mechanicName, rating, comment, jobType) => query(
+    'INSERT INTO Review (userId, mechanicId, mechanicName, rating, comment, jobType) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, mechanicId, mechanicName, rating, comment, jobType]
 );
 
-DB.deleteCar = (carId, userId) => query(
-    'DELETE FROM Car WHERE carId = ? AND userId = ?',
-    [carId, userId]
+DB.updateReview = (reviewId, userId, rating, comment, jobType) => query(
+    'UPDATE Review SET rating = ?, comment = ?, jobType = ? WHERE reviewId = ? AND userId = ?',
+    [rating, comment, jobType, reviewId, userId]
 );
 
-DB.saveScheduled = (carId, userId, scheduled) => query(
-    'UPDATE Car SET scheduled = ? WHERE carId = ? AND userId = ?',
-    [scheduled, carId, userId]
-);
-
-// ServiceProvider — lat/lng not in schema so always returns all providers
-DB.getProviders = () => query('SELECT * FROM ServiceProvider', []);
-
-DB.addServiceLog = (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax) => query(
-    `INSERT INTO ServiceLog (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax]
-);
-
-DB.getCarServiceLog = (carId, userId) => query(
-    'SELECT * FROM ServiceLog WHERE carId = ? AND userId = ? ORDER BY date DESC, logId DESC',
-    [carId, userId]
-);
-
-DB.getUserServiceLog = (userId) => query(
-    'SELECT * FROM ServiceLog WHERE userId = ? ORDER BY date DESC, logId DESC',
-    [userId]
-);
-
-DB.deleteServiceLog = (logId, userId) => query(
-    'DELETE FROM ServiceLog WHERE logId = ? AND userId = ?',
-    [logId, userId]
+DB.deleteReview = (reviewId, userId) => query(
+    'DELETE FROM Review WHERE reviewId = ? AND userId = ?',
+    [reviewId, userId]
 );
 
 module.exports = DB;

@@ -78,6 +78,9 @@ const usersRouter     = require('./routes/users');
 const carsRouter      = require('./routes/cars');
 const providersRouter = require('./routes/providers');
 
+const reviews = require('./routes/reviews');
+app.use('/reviews', reviews);
+
 app.use('/users',      usersRouter);
 app.use('/cars',       carsRouter);
 app.use('/providers',  providersRouter);
@@ -105,5 +108,6 @@ app.use((err, req, res, next) => {
     console.error('Unhandled error:', err.stack);
     res.status(500).json({ message: 'Internal server error', error: err.message });
 });
+
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
