@@ -24,12 +24,16 @@ reviews.get('/', async (req, res) => {
 reviews.post('/', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {
-        const { mechanicId, mechanicName, rating, comment, jobType } = req.body;
-        if (!mechanicId || !mechanicName || !rating || !comment) {
+        const { providerId, mechanicName, rating, comment, jobType } = req.body;
+        if (!mechanicName || !rating || !comment) {
             return res.status(400).json({ status: { success:false, msg:'Missing required fields' } });
         }
-        const result = await DB.addReview(req.session.user.id, mechanicId, mechanicName, rating, comment, jobType || '');
-        return res.status(201).json({ id: result.insertId, mechanicId, mechanicName, rating, comment, jobType });
+        // Only pass providerId if it's a real small integer DB id — OSM node ids are huge
+        const dbProviderId = providerId && /^\d+$/.test(String(providerId)) && Number(providerId) < 2147483647
+            ? Number(providerId)
+            : null;
+        const result = await DB.addReview(req.session.user.id, dbProviderId, mechanicName, rating, comment, jobType || '');
+        return res.status(201).json({ id: result.insertId, providerId: dbProviderId, mechanicName, rating, comment, jobType });
     } catch (err) {
         console.error('POST /reviews error:', err);
         return res.status(500).json({ status: { success:false, msg:'Server error' } });

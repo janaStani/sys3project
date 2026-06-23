@@ -80,6 +80,16 @@ if (DB_TYPE === 'sqlite') {
 
     `);
 
+    // migrations
+    const spCols = sqlite.prepare('PRAGMA table_info(ServiceProvider)').all().map(c => c.name);
+    if (!spCols.includes('userAdded')) {
+        sqlite.exec('ALTER TABLE ServiceProvider ADD COLUMN userAdded INTEGER NOT NULL DEFAULT 0');
+    }
+    const rvCols = sqlite.prepare('PRAGMA table_info(Review)').all().map(c => c.name);
+    if (!rvCols.includes('providerId')) {
+        sqlite.exec('ALTER TABLE Review ADD COLUMN providerId INTEGER REFERENCES ServiceProvider(providerId) ON DELETE SET NULL');
+    }
+
     const insertProvider = sqlite.prepare(
         'INSERT OR IGNORE INTO ServiceProvider (provider, priceRange, rating, location) VALUES (?, ?, ?, ?)'
     );
@@ -158,7 +168,25 @@ if (DB_TYPE === 'sqlite') {
     );
 
     // ServiceProvider — lat/lng not in schema so always returns all providers
-    DB.getProviders = () => query('SELECT * FROM ServiceProvider', []);
+    DB.getProviders = () => query(`
+        SELECT s.*,
+               COALESCE(AVG(r.rating), 0) AS avgRating,
+               COUNT(r.reviewId)          AS reviewCount
+        FROM ServiceProvider s
+        LEFT JOIN Review r ON r.providerId = s.providerId
+        GROUP BY s.providerId
+        ORDER BY s.userAdded DESC, avgRating DESC
+    `, []);
+
+DB.addProvider = (name, address, phone) => query(
+    'INSERT OR IGNORE INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)',
+    [name, address || '', phone || '']
+);
+
+DB.getProviderByName = (name) => query(
+    'SELECT * FROM ServiceProvider WHERE provider = ?',
+    [name]
+);
 
     DB.addServiceLog = (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax) => query(
         `INSERT INTO ServiceLog (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax)
@@ -182,13 +210,17 @@ if (DB_TYPE === 'sqlite') {
     );
 
     DB.getReviews = (userId) => query(
-    'SELECT reviewId AS id, userId, mechanicId, mechanicName, rating, comment, jobType, createdAt FROM Review WHERE userId = ? ORDER BY createdAt DESC',
-    [userId]
-);
+        `SELECT r.reviewId AS id, r.userId, r.providerId, r.mechanicName, r.rating, r.comment, r.jobType, r.createdAt
+         FROM Review r
+         LEFT JOIN ServiceProvider s ON r.providerId = s.providerId
+         WHERE r.userId = ?
+         ORDER BY r.createdAt DESC`,
+        [userId]
+    );
 
-DB.addReview = (userId, mechanicId, mechanicName, rating, comment, jobType) => query(
-    'INSERT INTO Review (userId, mechanicId, mechanicName, rating, comment, jobType) VALUES (?, ?, ?, ?, ?, ?)',
-    [userId, mechanicId, mechanicName, rating, comment, jobType]
+DB.addReview = (userId, providerId, mechanicName, rating, comment, jobType) => query(
+    'INSERT INTO Review (userId, providerId, mechanicName, rating, comment, jobType) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, providerId, mechanicName, rating, comment, jobType]
 );
 
 DB.updateReview = (reviewId, userId, rating, comment, jobType) => query(
