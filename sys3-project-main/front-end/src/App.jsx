@@ -186,6 +186,7 @@ class App extends Component {
           onServiceLogged={this.handleServiceLogged}
           onServiceLogRemoved={this.handleServiceLogRemoved}
           saveScheduled={this.saveScheduled}
+          user={user}
         />
       );
     }
@@ -201,7 +202,7 @@ class App extends Component {
     }
 
     if (currentPage === "CAR")      return <Car/>;
-    if (currentPage === "MECHANIC") return <Mechanic/>;
+    if (currentPage === "MECHANIC") return <Mechanic user={this.state.user} />;
     if (currentPage === "SIGNUP")   return <SignupView QUserFromChild={this.setLoggedIn}/>;
     if (currentPage === "LOGIN")    return <LoginView  QUserFromChild={this.setLoggedIn}/>;
 

@@ -6,6 +6,8 @@ node_modules/
 
 # Local SQLite database file
 /db/local.db
+/db/local.db-shm
+/db/local.db-wal
 
 # Uploaded files
 uploads/

@@ -389,6 +389,7 @@ function ProviderCard({ provider: p}) {
 
 // ── NEARBY PROVIDERS PANEL ────────────────────────────────────────────────────
 function NearbyProviders({ event, onClose }) {
+  console.log("NearbyProviders event:", event);
   const [osmMechanics,  setOsmMechanics]  = useState([]);
   const [dbProviders,   setDbProviders]   = useState([]);
   const [coords,        setCoords]        = useState(null);
@@ -540,7 +541,7 @@ function NearbyProviders({ event, onClose }) {
   );
 }
 
-function CalendarView({ cars, allScheduled, serviceLog }) {
+function CalendarView({ cars, allScheduled, serviceLog, user }) {
   const today = new Date();
   const [viewYear,      setViewYear]      = useState(today.getFullYear());
   const [viewMonth,     setViewMonth]     = useState(today.getMonth());
@@ -576,7 +577,7 @@ function CalendarView({ cars, allScheduled, serviceLog }) {
 
   function handleDayClick(dayEvs) {
     if (!dayEvs.length) return;
-    if (dayEvs.length === 1) setSelectedEvent(dayEvs[0]);
+    if (dayEvs.length === 1) setSelectedEvent({ ...dayEvs[0], user });
     else setDayEvents(dayEvs);
   }
 
@@ -638,7 +639,7 @@ function CalendarView({ cars, allScheduled, serviceLog }) {
             {upcomingThisMonth.map((ev, i) => {
               const sm = STATUS_STYLES[ev.svc.status];
               return (
-                <div key={i} onClick={() => setSelectedEvent(ev)}
+                <div key={i} onClick={() => setSelectedEvent({...ev, user})}
                   style={{ background:"#16181e", border:"1px solid #252830", borderRadius:10, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", transition:"border-color .15s" }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = "#e0a820"}
                   onMouseLeave={e => e.currentTarget.style.borderColor = "#252830"}>
@@ -666,7 +667,7 @@ function CalendarView({ cars, allScheduled, serviceLog }) {
         </div>
       )}
 
-      {dayEvents     && <DayEventsPicker events={dayEvents} onSelect={ev => { setDayEvents(null); setSelectedEvent(ev); }} onClose={() => setDayEvents(null)}/>}
+      {dayEvents     && <DayEventsPicker events={dayEvents} onSelect={ev => { setDayEvents(null); setSelectedEvent({...ev, user}); }} onClose={() => setDayEvents(null)}/>}
       {selectedEvent && <NearbyProviders event={selectedEvent} onClose={() => setSelectedEvent(null)}/>}
     </div>
   );
@@ -919,7 +920,7 @@ function CarCard({ car, serviceLog, onDelete, scheduled, onToggle, onDate, onCom
 function MyCar({
   cars, allScheduled, serviceLog, garageLoaded, garageError,
   onAddCar, onDeleteCar, onToggle, onDate, onComplete,
-  onClearError, onServiceLogged, onServiceLogRemoved
+  onClearError, onServiceLogged, onServiceLogRemoved, user
 }) {
   const [showModal,  setShowModal]  = useState(false);
   const [tab,        setTab]        = useState("garage");
@@ -1050,7 +1051,7 @@ function MyCar({
                 {cars.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"60px 20px", color:"#555", fontSize:13 }}>Add a car first, then schedule its services to see them here.</div>
                 ) : (
-                  <CalendarView cars={cars} allScheduled={allScheduled} serviceLog={serviceLog}/>
+                  <CalendarView cars={cars} allScheduled={allScheduled} serviceLog={serviceLog} user={user}/>
                 )}
               </>
             )}

@@ -44,6 +44,7 @@ users.post('/login', async (req, res) => {
             id:       dbUser.userId,
             username: dbUser.username,
             email:    dbUser.email,
+            zipcode:  dbUser.zipcode,
         };
 
         await new Promise((resolve, reject) =>
@@ -52,7 +53,7 @@ users.post('/login', async (req, res) => {
 
         // Issue a JWT so the React frontend can authenticate cross-origin requests
         const token = jwt.sign(
-            { id: dbUser.userId, username: dbUser.username, email: dbUser.email },
+            { id: dbUser.userId, username: dbUser.username, email: dbUser.email, zipcode: dbUser.zipcode },
             JWT_SECRET,
             { expiresIn: '24h' }
         );

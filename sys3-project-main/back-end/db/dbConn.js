@@ -76,7 +76,6 @@ if (DB_TYPE === 'sqlite') {
             jobType TEXT,
             createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(userId) REFERENCES User(userId) ON DELETE CASCADE
-            FOREIGN KEY (providerId) REFERENCES ServiceProvider(providerId) ON DELETE SE
         );
 
     `);

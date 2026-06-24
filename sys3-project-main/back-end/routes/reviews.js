@@ -50,6 +50,17 @@ reviews.post('/', async (req, res) => {
             }
         }
 
+        // Enforce one review per user per mechanic.
+        console.log("DUP CHECK — dbProviderId:", dbProviderId, "userId:", req.session.user.id);
+        if (dbProviderId) {
+            const existing = await DB.getUserReviewForProvider(req.session.user.id, dbProviderId);
+            if (existing && existing.length > 0) {
+                return res.status(409).json({
+                    status: { success:false, msg:'You have already reviewed this mechanic. Edit your existing review instead.' }
+                });
+            }
+        }
+
         const result = await DB.addReview(
             req.session.user.id, dbProviderId, mechanicName, rating, comment, jobType || ''
         );

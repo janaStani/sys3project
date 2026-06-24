@@ -40,6 +40,15 @@ async function getNearbyMechanicsOSM(coords) {
     .filter(el => el.lat && el.lng);
 }
 
+async function geocodeZipcode(zipcode) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zipcode)}&country=SI&format=json&limit=1`,
+    { headers: { "Accept-Language": "en" } }
+  );
+  const data = await res.json();
+  if (!data.length) return null;
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+}
 
 function distanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
@@ -142,6 +151,7 @@ class Mechanic extends React.Component {
     nearbyMechanics: [],
     nearbyLoading:   true,
     nearbyError:     "",
+    nearbyInfo:      "",
 
     // search
     searchQuery:   "",
@@ -174,26 +184,51 @@ class Mechanic extends React.Component {
 
   componentDidMount() {
     this.fetchReviews();
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          this.setState({ userCoords: coords });
-          getNearbyMechanicsOSM(coords)
-            .then(results => {
-              const sorted = results
-                .map(m => ({ ...m, distance: distanceKm(coords.lat, coords.lng, m.lat, m.lng) }))
-                .sort((a, b) => a.distance - b.distance);
-              this.setState({ nearbyMechanics: sorted, nearbyLoading: false });
-            })
-            .catch(() => this.setState({ nearbyLoading: false, nearbyError: "Could not load nearby mechanics." }));
-        },
-        () => this.setState({ nearbyLoading: false, nearbyError: "Location access denied." }),
-        { timeout: 10000 }
-      );
-    } else {
-      this.setState({ nearbyLoading: false, nearbyError: "Geolocation not supported." });
+
+    const zipcode = this.props.user?.zipcode;
+
+    const loadFromCoords = (coords) => {
+      this.setState({ userCoords: coords });
+      getNearbyMechanicsOSM(coords)
+        .then(results => {
+          const sorted = results
+            .map(m => ({ ...m, distance: distanceKm(coords.lat, coords.lng, m.lat, m.lng) }))
+            .sort((a, b) => a.distance - b.distance);
+          this.setState({ nearbyMechanics: sorted, nearbyLoading: false });
+        })
+        .catch(err => {
+          console.error("OSM fetch failed:", err);
+          this.setState({ nearbyLoading: false, nearbyError: "Could not load nearby mechanics." });
+        });
+    };
+
+    const tryZipcode = () => {
+      if (!zipcode) {
+        this.setState({ nearbyLoading: false, nearbyError: "Location unavailable." });
+        return;
+      }
+      geocodeZipcode(zipcode)
+        .then(coords => {
+          if (!coords) {
+            this.setState({ nearbyLoading: false, nearbyError: "Could not resolve your postcode." });
+            return;
+          }
+          this.setState({ nearbyError: "", nearbyInfo: "Showing results for your account postcode." });
+          loadFromCoords(coords);  // ← nearbyLoading is set to false inside here only on success
+        })
+        .catch(() => this.setState({ nearbyLoading: false, nearbyError: "Location unavailable." }));
+    };
+
+    if (!navigator.geolocation || location.protocol !== 'https:') {
+      tryZipcode();
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      pos => loadFromCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => tryZipcode(),
+      { timeout: 10000 }
+    );
   }
 
   fetchReviews = () => {
@@ -247,6 +282,19 @@ class Mechanic extends React.Component {
     if (!selectedMechanic && !editId) { this.showSaveStatus({ success:false, msg:"Select a mechanic first." }); return; }
     if (!rating)         { this.showSaveStatus({ success:false, msg:"Please select a star rating." }); return; }
     if (!comment.trim()) { this.showSaveStatus({ success:false, msg:"Please write a comment." }); return; }
+
+    // One review per user per mechanic — block obvious duplicates before the round-trip.
+    // (The backend enforces this authoritatively; this is just nicer UX.)
+    if (!editId && selectedMechanic) {
+      const alreadyReviewed = this.state.reviews.some(
+        r => r.providerId && String(r.providerId) === String(selectedMechanic.id)
+      );
+      if (alreadyReviewed) {
+        this.showSaveStatus({ success:false, msg:"You've already reviewed this mechanic. Edit your existing review instead." });
+        return;
+      }
+    }
+
     this.setState({ saving: true, saveStatus: null });
     try {
       if (editId) {
@@ -286,7 +334,7 @@ class Mechanic extends React.Component {
   };
 
   render() {
-    const { userCoords, nearbyMechanics, nearbyLoading, nearbyError, searchQuery, selectedMechanic, rating, comment, jobType, saving, saveStatus, editId, reviews, reviewsLoading } = this.state;
+    const { userCoords, nearbyMechanics, nearbyLoading, nearbyError, nearbyInfo, searchQuery, selectedMechanic, rating, comment, jobType, saving, saveStatus, editId, reviews, reviewsLoading } = this.state;
 
     return (
       <div style={S.page}>
@@ -313,6 +361,10 @@ class Mechanic extends React.Component {
             <div style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em", marginBottom:12 }}>
               📍 Mechanics near you, click to select
             </div>
+
+            {nearbyInfo && (
+              <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>{nearbyInfo}</div>
+            )}
 
             {nearbyLoading ? (
               <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", color:"#555", fontSize:13 }}>
