@@ -179,7 +179,7 @@ if (DB_TYPE === 'sqlite') {
     `, []);
 
 DB.addProvider = (name, address, phone) => query(
-    'INSERT OR IGNORE INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)',
+    'INSERT IGNORE INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)'
     [name, address || '', phone || '']
 );
 
