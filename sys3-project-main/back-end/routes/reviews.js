@@ -24,16 +24,38 @@ reviews.get('/', async (req, res) => {
 reviews.post('/', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {
-        const { providerId, mechanicName, rating, comment, jobType } = req.body;
+        const { providerId, mechanicName, mechanicAddress, rating, comment, jobType } = req.body;
         if (!mechanicName || !rating || !comment) {
             return res.status(400).json({ status: { success:false, msg:'Missing required fields' } });
         }
-        // Only pass providerId if it's a real small integer DB id — OSM node ids are huge
-        const dbProviderId = providerId && /^\d+$/.test(String(providerId)) && Number(providerId) < 2147483647
-            ? Number(providerId)
-            : null;
-        const result = await DB.addReview(req.session.user.id, dbProviderId, mechanicName, rating, comment, jobType || '');
-        return res.status(201).json({ id: result.insertId, providerId: dbProviderId, mechanicName, rating, comment, jobType });
+
+        // Resolve a real DB providerId for every review — OSM mechanics get a provider
+        // row created on first review so their ratings accumulate over time.
+        let dbProviderId = null;
+
+        // If the caller already sent a valid small integer providerId, trust it.
+        const sentId = Number(providerId);
+        const isRealDbId = providerId && /^\d+$/.test(String(providerId)) && sentId < 2_000_000_000;
+
+        if (isRealDbId) {
+            dbProviderId = sentId;
+        } else {
+            // Look up or create a provider row by name so the rating is persisted.
+            try {
+                await DB.addProvider(mechanicName.trim(), mechanicAddress || '', '');
+                const rows = await DB.getProviderByName(mechanicName.trim());
+                if (rows && rows[0]) dbProviderId = rows[0].providerId;
+            } catch (e) {
+                console.error('Provider upsert failed (non-fatal):', e.message);
+            }
+        }
+
+        const result = await DB.addReview(
+            req.session.user.id, dbProviderId, mechanicName, rating, comment, jobType || ''
+        );
+        return res.status(201).json({
+            id: result.insertId, providerId: dbProviderId, mechanicName, rating, comment, jobType
+        });
     } catch (err) {
         console.error('POST /reviews error:', err);
         return res.status(500).json({ status: { success:false, msg:'Server error' } });

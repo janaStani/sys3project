@@ -1,289 +1,284 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axiosAuth from "../Utils/axiosAuth";
 import { API_URL } from "../Utils/Configuration";
 
+// ── OSM / Overpass ────────────────────────────────────────────────────────────
+async function getNearbyMechanicsOSM(coords) {
+  const radius = 25000;
+  const overpassQuery = `
+    [out:json][timeout:25];
+    (
+      node["amenity"="car_repair"](around:${radius},${coords.lat},${coords.lng});
+      way["amenity"="car_repair"](around:${radius},${coords.lat},${coords.lng});
+      node["craft"="car_repair"](around:${radius},${coords.lat},${coords.lng});
+      way["craft"="car_repair"](around:${radius},${coords.lat},${coords.lng});
+      node["shop"="car_repair"](around:${radius},${coords.lat},${coords.lng});
+      way["shop"="car_repair"](around:${radius},${coords.lat},${coords.lng});
+      node["shop"="tyres"](around:${radius},${coords.lat},${coords.lng});
+      way["shop"="tyres"](around:${radius},${coords.lat},${coords.lng});
+      node["craft"="tyre_fitting"](around:${radius},${coords.lat},${coords.lng});
+    );
+    out center 40;
+  `;
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `data=${encodeURIComponent(overpassQuery)}`,
+  });
+  if (!res.ok) throw new Error(`OSM error: ${res.status}`);
+  const data = await res.json();
+  return data.elements
+    .map(el => ({
+      id:      String(el.id),
+      name:    el.tags?.name || el.tags?.["name:sl"] || el.tags?.["name:en"] || "Auto servis",
+      address: [el.tags?.["addr:street"], el.tags?.["addr:housenumber"], el.tags?.["addr:city"]].filter(Boolean).join(", "),
+      phone:   el.tags?.phone || el.tags?.["contact:phone"] || "",
+      website: el.tags?.website || el.tags?.["contact:website"] || "",
+      lat:     el.lat ?? el.center?.lat,
+      lng:     el.lon ?? el.center?.lon,
+    }))
+    .filter(el => el.lat && el.lng);
+}
+
+
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
 const STAR_COLORS = ["#E24B4A", "#e07820", "#e0a820", "#a0c030", "#639922"];
 const STAR_LABELS = ["Terrible", "Poor", "OK", "Good", "Excellent"];
 
 const S = {
-  page:         { fontFamily:"'DM Sans', system-ui, sans-serif", minHeight:"100vh", background:"#0d0f12", color:"#f0f0f0", padding:"32px 20px 80px" },
-  logo:         { fontFamily:"'Bebas Neue', sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820", marginBottom:4 },
-  card:         { background:"#16181e", border:"1px solid #252830", borderRadius:16, padding:24, marginBottom:32 },
-  label:        { fontSize:11, color:"#888", textTransform:"uppercase", letterSpacing:".08em", marginBottom:8, display:"block" },
-  input:        { width:"100%", background:"#0d0f12", border:"1px solid #252830", borderRadius:10, padding:"11px 14px", fontSize:14, color:"#f0f0f0", fontFamily:"inherit", outline:"none", boxSizing:"border-box" },
-  searchBtn:    { position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"#e0a820", border:"none", borderRadius:6, padding:"6px 14px", fontSize:12, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit" },
-  submitBtn:    { background:"#e0a820", border:"none", borderRadius:10, padding:"12px 24px", fontSize:14, fontWeight:700, color:"#0d0f12", fontFamily:"inherit", transition:"opacity .2s" },
-  editBanner:   { background:"#1e1a08", border:"1px solid #4a3a10", borderRadius:10, padding:"10px 14px", marginBottom:20, fontSize:13, color:"#e0a820", display:"flex", justifyContent:"space-between", alignItems:"center" },
-  mechanicIcon: { width:36, height:36, borderRadius:8, background:"#0d0f12", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, border:"1px solid #252830", flexShrink:0 },
-  reviewCard:   { background:"#16181e", border:"1px solid #252830", borderRadius:14, padding:18 },
-  jobTag:       { fontSize:11, color:"#e0a820", background:"#1e1a08", border:"1px solid #4a3a10", borderRadius:20, padding:"2px 10px", display:"inline-block", marginBottom:8 },
-  editBtn:      { background:"none", border:"1px solid #252830", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#888", cursor:"pointer", fontFamily:"inherit" },
-  deleteBtn:    { background:"none", border:"1px solid #5a1a1a", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#E24B4A", cursor:"pointer", fontFamily:"inherit" },
+  page:      { fontFamily:"'DM Sans', system-ui, sans-serif", minHeight:"100vh", background:"#0d0f12", color:"#f0f0f0", padding:"32px 20px 80px" },
+  logo:      { fontFamily:"'Bebas Neue', sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820", marginBottom:4 },
+  card:      { background:"#16181e", border:"1px solid #252830", borderRadius:16, padding:24, marginBottom:32 },
+  label:     { fontSize:11, color:"#888", textTransform:"uppercase", letterSpacing:".08em", marginBottom:8, display:"block" },
+  input:     { width:"100%", background:"#0d0f12", border:"1px solid #252830", borderRadius:10, padding:"11px 14px", fontSize:14, color:"#f0f0f0", fontFamily:"inherit", outline:"none", boxSizing:"border-box" },
+  editBanner:{ background:"#1e1a08", border:"1px solid #4a3a10", borderRadius:10, padding:"10px 14px", marginBottom:20, fontSize:13, color:"#e0a820", display:"flex", justifyContent:"space-between", alignItems:"center" },
+  jobTag:    { fontSize:11, color:"#e0a820", background:"#1e1a08", border:"1px solid #4a3a10", borderRadius:20, padding:"2px 10px", display:"inline-block", marginBottom:8 },
+  editBtn:   { background:"none", border:"1px solid #252830", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#888", cursor:"pointer", fontFamily:"inherit" },
+  deleteBtn: { background:"none", border:"1px solid #5a1a1a", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#E24B4A", cursor:"pointer", fontFamily:"inherit" },
 };
 
+// ── Sub-components ────────────────────────────────────────────────────────────
 function StarPicker({ value, onChange, readonly = false }) {
   const [hovered, setHovered] = useState(0);
   const display = readonly ? value : (hovered || value);
-
   return (
     <div style={{ display:"flex", gap:6 }}>
       {[1,2,3,4,5].map(n => (
-        <span
-          key={n}
+        <span key={n}
           onClick={() => !readonly && onChange?.(n === value ? 0 : n)}
           onMouseEnter={() => !readonly && setHovered(n)}
           onMouseLeave={() => !readonly && setHovered(0)}
-          style={{
-            fontSize:   readonly ? 18 : 28,
-            cursor:     readonly ? "default" : "pointer",
-            color:      n <= display ? STAR_COLORS[Math.min(display, 5) - 1] : "#2a2d35",
-            transition: "color .15s, transform .1s",
-            transform:  !readonly && n <= display ? "scale(1.15)" : "scale(1)",
-            display:    "inline-block",
-            userSelect: "none",
-          }}
+          style={{ fontSize:readonly?16:28, cursor:readonly?"default":"pointer", color:n<=display?STAR_COLORS[Math.min(display,5)-1]:"#2a2d35", transition:"color .15s, transform .1s", transform:(!readonly&&n<=display)?"scale(1.15)":"scale(1)", display:"inline-block", userSelect:"none" }}
         >★</span>
       ))}
     </div>
   );
 }
 
-function ProviderCard({ provider: p }) {
-  const rating = parseFloat(p.rating) || 0;
-  const stars  = Math.round(rating);
+function MechanicRow({ mechanic, onSelect, distKm, highlight }) {
   return (
-    <div style={{ background:"#0d0f12", border:"1px solid #252830", borderRadius:12, padding:16 }}>
-      <div style={{ display:"flex", alignItems:"flex-start", gap:12, marginBottom:10 }}>
-        <div style={{ width:44, height:44, borderRadius:10, background:"#16181e", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🔧</div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:15, fontWeight:600, marginBottom:2 }}>{p.provider || p.name || "Service Provider"}</div>
-          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-            {rating > 0 && (
-              <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                {[1,2,3,4,5].map(n => <span key={n} style={{ fontSize:12, color:n<=stars?"#e0a820":"#2a2d35" }}>★</span>)}
-                <span style={{ fontSize:11, color:"#888" }}>{rating.toFixed(1)}</span>
-              </div>
-            )}
-            {p.priceRange && (
-              <span style={{ fontSize:11, color:"#e0a820", background:"#1e1a08", border:"1px solid #4a3a10", borderRadius:12, padding:"1px 8px" }}>{p.priceRange}</span>
-            )}
-          </div>
-        </div>
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:12 }}>
-        {p.location && <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#888" }}><span style={{ color:"#555", width:14, textAlign:"center" }}>📍</span>{p.location}{p.zipcode ? `, ${p.zipcode}` : ""}</div>}
-        {p.hours    && <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#888" }}><span style={{ color:"#555", width:14, textAlign:"center" }}>🕐</span>{p.hours}</div>}
-        {p.item     && <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:"#888" }}><span style={{ color:"#555", width:14, textAlign:"center" }}>🛠️</span>Specialises in: {p.item}</div>}
-      </div>
-      <a
-        href={`https://www.google.com/maps/search/${encodeURIComponent((p.provider || "") + " " + (p.location || ""))}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ display:"inline-block", background:"#e0a820", borderRadius:8, padding:"8px 16px", fontSize:12, fontWeight:700, color:"#0d0f12", textDecoration:"none" }}
-      >
-        View on Maps →
-      </a>
-    </div>
-  );
-}
-
-function NearbyProviders({ onClose }) {
-  const [providers, setProviders] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [location,  setLocation]  = useState(null);
-  const [locError,  setLocError]  = useState("");
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocError("Geolocation not supported by your browser.");
-      fetchProviders(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const coords = { lat:pos.coords.latitude, lng:pos.coords.longitude };
-        setLocation(coords);
-        fetchProviders(coords);
-      },
-      () => {
-        setLocError("Could not detect location — showing all providers.");
-        fetchProviders(null);
-      },
-      { timeout:8000 }
-    );
-  }, []);
-
-  function fetchProviders(coords) {
-    setLoading(true);
-    const query = coords ? `?lat=${coords.lat}&lng=${coords.lng}` : "";
-    axiosAuth.get(`${API_URL}/providers${query}`)
-      .then(res => {
-        const data = res.data;
-        setProviders(Array.isArray(data) ? data : Array.isArray(data.providers) ? data.providers : []);
-      })
-      .catch(() => setProviders([]))
-      .finally(() => setLoading(false));
-  }
-
-  const locationStatus = loading
-    ? "Detecting your location…"
-    : location
-      ? "Location detected — showing nearby providers"
-      : locError || "Showing all providers";
-
-  return (
-    <div
-      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300, padding:20 }}
-      onClick={e => e.target === e.currentTarget && onClose()}
+    <div onClick={() => onSelect(mechanic)}
+      style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #1a1c22", display:"flex", alignItems:"center", gap:12, background:highlight?"#1e2028":"transparent", transition:"background .15s" }}
+      onMouseEnter={e => e.currentTarget.style.background = "#1e2028"}
+      onMouseLeave={e => e.currentTarget.style.background = highlight?"#1e2028":"transparent"}
     >
-      <div style={{ background:"#16181e", borderRadius:20, border:"1px solid #252830", width:"100%", maxWidth:600, maxHeight:"80vh", overflow:"hidden", display:"flex", flexDirection:"column" }}>
-
-        <div style={{ padding:"20px 20px 16px", borderBottom:"1px solid #252830", flexShrink:0 }}>
-          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
-            <div>
-              <div style={{ fontSize:18, fontWeight:600 }}>🔧 Mechanics Near You</div>
-              <div style={{ fontSize:12, color:"#555", marginTop:2 }}>Find a trusted mechanic in your area</div>
-            </div>
-            <button onClick={onClose} style={{ background:"none", border:"none", color:"#888", fontSize:24, cursor:"pointer", lineHeight:1, padding:4 }}>×</button>
-          </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:14 }}>📍</span>
-            <span style={{ fontSize:12, color:location?"#639922":"#555" }}>{locationStatus}</span>
-          </div>
-        </div>
-
-        <div style={{ overflowY:"auto", padding:"16px 20px 24px", flex:1 }}>
-          {loading ? (
-            <div style={{ textAlign:"center", padding:"40px 0", color:"#555", fontSize:13 }}>
-              <div style={{ fontSize:28, marginBottom:8, opacity:.4 }}>🔧</div>
-              Finding mechanics near you…
-            </div>
-          ) : providers.length === 0 ? (
-            <div style={{ textAlign:"center", padding:"40px 0", color:"#555", fontSize:13 }}>
-              <div style={{ fontSize:28, marginBottom:8, opacity:.4 }}>🔍</div>
-              No service providers found near you.
-            </div>
-          ) : (
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>
-                {providers.length} Provider{providers.length !== 1 ? "s" : ""} found
-              </div>
-              {providers.map((p, i) => <ProviderCard key={p.providerId || i} provider={p}/>)}
-            </div>
-          )}
-        </div>
-
+      <div style={{ width:38, height:38, borderRadius:10, background:"#0d0f12", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🔧</div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:14, fontWeight:600 }}>{mechanic.name}</div>
+        {mechanic.address && <div style={{ fontSize:11, color:"#555", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{mechanic.address}</div>}
+        {mechanic.phone && <div style={{ fontSize:11, color:"#444", marginTop:1 }}>{mechanic.phone}</div>}
       </div>
+      {distKm != null && (
+        <div style={{ fontSize:11, color:"#e0a820", fontWeight:600, flexShrink:0 }}>{distKm.toFixed(1)} km</div>
+      )}
     </div>
   );
 }
 
+function ReviewCard({ review: r, onEdit, onDelete }) {
+  const stars = r.rating || 0;
+  return (
+    <div style={{ background:"#16181e", border:"1px solid #252830", borderRadius:14, padding:18 }}>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, marginBottom:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:40, height:40, borderRadius:10, background:"#0d0f12", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>🔧</div>
+          <div>
+            <div style={{ fontSize:15, fontWeight:600, marginBottom:3 }}>{r.mechanicName}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <StarPicker value={stars} readonly/>
+              {stars > 0 && <span style={{ fontSize:11, color:STAR_COLORS[stars-1], fontWeight:600 }}>{STAR_LABELS[stars-1]}</span>}
+            </div>
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+          <button onClick={() => onEdit(r)} style={S.editBtn}>Edit</button>
+          <button onClick={() => onDelete(r.id)} style={S.deleteBtn}>Delete</button>
+        </div>
+      </div>
+      {r.jobType && <div style={S.jobTag}>{r.jobType}</div>}
+      <p style={{ fontSize:13, color:"#aaa", lineHeight:1.7 }}>{r.comment}</p>
+      {r.createdAt && (
+        <div style={{ fontSize:11, color:"#444", marginTop:10 }}>
+          {new Date(r.createdAt).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 class Mechanic extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      searchQuery:      "",
-      mechanics:        [],
-      searchLoading:    false,
-      searchError:      "",
-      selectedMechanic: null,
-      rating:           0,
-      comment:          "",
-      jobType:          "",
-      saving:           false,
-      saveStatus:       null,
-      reviews:          [],
-      reviewsLoading:   false,
-      editId:           null,
-      showNearby:       false,
-    };
+  state = {
+    // location + nearby
+    userCoords:      null,
+    nearbyMechanics: [],
+    nearbyLoading:   true,
+    nearbyError:     "",
+
+    // search
+    searchQuery:   "",
+    searchError:   "",
+
+    // selection
+    selectedMechanic: null,
+
+    // form
+    rating:     0,
+    comment:    "",
+    jobType:    "",
+    saving:     false,
+    saveStatus: null,
+    editId:     null,
+
+    // reviews
+    reviews:        [],
+    reviewsLoading: false,
+
+    // user-added mechanics from DB
+    userAddedMechanics: [],
+  };
+
+  saveStatusTimer = null;
+
+  componentWillUnmount() {
+    if (this.saveStatusTimer) clearTimeout(this.saveStatusTimer);
   }
 
   componentDidMount() {
     this.fetchReviews();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          this.setState({ userCoords: coords });
+          getNearbyMechanicsOSM(coords)
+            .then(results => {
+              const sorted = results
+                .map(m => ({ ...m, distance: distanceKm(coords.lat, coords.lng, m.lat, m.lng) }))
+                .sort((a, b) => a.distance - b.distance);
+              this.setState({ nearbyMechanics: sorted, nearbyLoading: false });
+            })
+            .catch(() => this.setState({ nearbyLoading: false, nearbyError: "Could not load nearby mechanics." }));
+        },
+        () => this.setState({ nearbyLoading: false, nearbyError: "Location access denied." }),
+        { timeout: 10000 }
+      );
+    } else {
+      this.setState({ nearbyLoading: false, nearbyError: "Geolocation not supported." });
+    }
   }
 
   fetchReviews = () => {
-    this.setState({ reviewsLoading:true });
+    this.setState({ reviewsLoading: true });
     axiosAuth.get(`${API_URL}/reviews`)
-      .then(res => {
-        const data = res.data;
-        const reviews = Array.isArray(data) ? data : Array.isArray(data.reviews) ? data.reviews : [];
-        this.setState({ reviews, reviewsLoading:false });
-      })
-      .catch(() => this.setState({ reviews:[], reviewsLoading:false }));
-  };
-
-  searchMechanics = () => {
-    const { searchQuery } = this.state;
-    if (!searchQuery.trim()) return;
-    this.setState({ searchLoading:true, searchError:"", mechanics:[] });
-    axiosAuth.get(`${API_URL}/reviews/mechanics?q=${encodeURIComponent(searchQuery)}`)
-      .then(res => this.setState({ mechanics:res.data.mechanics || res.data || [], searchLoading:false }))
-      .catch(() => this.setState({ searchError:"Could not find mechanics. Try a different name.", searchLoading:false }));
+      .then(res => this.setState({ reviews: Array.isArray(res.data) ? res.data : [], reviewsLoading: false }))
+      .catch(() => this.setState({ reviews: [], reviewsLoading: false }));
   };
 
   selectMechanic = (m) => {
-    this.setState({ selectedMechanic:m, mechanics:[], searchQuery:m.name || m.username || "" });
+    if (this.searchTimeout) clearTimeout(this.searchTimeout);
+    this.setState({ selectedMechanic: m, searchQuery: ""});
+  };
+
+  clearSelection = () => {
+    this.setState({ selectedMechanic: null, searchQuery: "" });
+  };
+
+  handleManualName = (e) => {
+      const name = e.target.value;
+
+      this.setState({
+        searchQuery: name,
+        selectedMechanic: name.trim()
+          ? {
+              id: "manual",
+              name: name.trim(),
+              address: "",
+              phone: "",
+              manual: true
+            }
+          : null
+      });
+    };
+
+  showSaveStatus = (status) => {
+    if (this.saveStatusTimer) clearTimeout(this.saveStatusTimer);
+    this.setState({ saveStatus: status });
+    if (status.success) {
+      this.saveStatusTimer = setTimeout(() => this.setState({ saveStatus: null }), 3000);
+    }
+  };
+
+  dismissSaveStatus = () => {
+    if (this.saveStatusTimer) clearTimeout(this.saveStatusTimer);
+    this.setState({ saveStatus: null });
   };
 
   submitReview = async () => {
     const { selectedMechanic, rating, comment, jobType, editId } = this.state;
-
-    if (!selectedMechanic && !editId) return;
-    if (!rating)         { this.setState({ saveStatus:{ success:false, msg:"Please select a star rating." } }); return; }
-    if (!comment.trim()) { this.setState({ saveStatus:{ success:false, msg:"Please write a comment." } }); return; }
-
-    this.setState({ saving:true, saveStatus:null });
-
+    if (!selectedMechanic && !editId) { this.showSaveStatus({ success:false, msg:"Select a mechanic first." }); return; }
+    if (!rating)         { this.showSaveStatus({ success:false, msg:"Please select a star rating." }); return; }
+    if (!comment.trim()) { this.showSaveStatus({ success:false, msg:"Please write a comment." }); return; }
+    this.setState({ saving: true, saveStatus: null });
     try {
-      const payload = {
-        mechanicId:   selectedMechanic?.id,
-        mechanicName: selectedMechanic?.name || selectedMechanic?.username,
-        rating,
-        comment,
-        jobType,
-      };
-
       if (editId) {
-        await axiosAuth.put(`${API_URL}/reviews/${editId}`, payload);
+        await axiosAuth.put(`${API_URL}/reviews/${editId}`, { rating, comment, jobType });
       } else {
-        await axiosAuth.post(`${API_URL}/reviews`, payload);
+        // Send providerId only if it's a real DB id (small integer).
+        // For OSM mechanics the backend will auto-create a ServiceProvider row.
+        const sentProviderId = selectedMechanic.id;
+        const isDbId = sentProviderId && /^\d+$/.test(String(sentProviderId)) && Number(sentProviderId) < 2_000_000_000;
+        await axiosAuth.post(`${API_URL}/reviews`, {
+          providerId:      isDbId ? sentProviderId : null,
+          mechanicName:    selectedMechanic.name,
+          mechanicAddress: selectedMechanic.address || "",
+          rating, comment, jobType,
+        });
       }
-
-      this.setState({
-        saving:false,
-        saveStatus:       { success:true, msg:editId ? "Review updated!" : "Review submitted!" },
-        rating:           0,
-        comment:          "",
-        jobType:          "",
-        selectedMechanic: null,
-        searchQuery:      "",
-        editId:           null,
-      });
+      this.setState({ saving:false, rating:0, comment:"", jobType:"", selectedMechanic:null, searchQuery:"", editId:null });
+      this.showSaveStatus({ success:true, msg: editId ? "Review updated!" : "Review submitted!" });
       this.fetchReviews();
     } catch (err) {
-      this.setState({ saving:false, saveStatus:{ success:false, msg:err.response?.data?.status?.msg || "Could not save review." } });
+      this.setState({ saving:false });
+      this.showSaveStatus({ success:false, msg: err.response?.data?.status?.msg || "Could not save review." });
     }
   };
 
   editReview = (r) => {
-    this.setState({
-      editId:           r.id,
-      rating:           r.rating || r.star || 0,
-      comment:          r.comment || "",
-      jobType:          r.jobType || "",
-      selectedMechanic: { id:r.mechanicId, name:r.mechanicName },
-      searchQuery:      r.mechanicName || "",
-      saveStatus:       null,
-    });
+    this.setState({ editId:r.id, rating:r.rating||0, comment:r.comment||"", jobType:r.jobType||"", selectedMechanic:{ id:r.providerId, name:r.mechanicName }, searchQuery:"", saveStatus:null });
     window.scrollTo({ top:0, behavior:"smooth" });
   };
 
   deleteReview = (id) => {
-    axiosAuth.delete(`${API_URL}/reviews/${id}`)
-      .then(() => this.fetchReviews())
-      .catch(() => {});
+    axiosAuth.delete(`${API_URL}/reviews/${id}`).then(() => this.fetchReviews()).catch(() => {});
   };
 
   cancelEdit = () => {
@@ -291,40 +286,108 @@ class Mechanic extends React.Component {
   };
 
   render() {
-    const {
-      searchQuery, mechanics, searchLoading, searchError, selectedMechanic,
-      rating, comment, jobType, saving, saveStatus, reviews, reviewsLoading,
-      editId, showNearby,
-    } = this.state;
+    const { userCoords, nearbyMechanics, nearbyLoading, nearbyError, searchQuery, selectedMechanic, rating, comment, jobType, saving, saveStatus, editId, reviews, reviewsLoading } = this.state;
 
     return (
       <div style={S.page}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap');
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          ::placeholder { color: #444; }
-          ::-webkit-scrollbar { width: 4px; }
-          ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-          input:focus, textarea:focus { outline: none; border-color: #e0a820 !important; }
+          * { box-sizing:border-box; margin:0; padding:0; }
+          ::placeholder { color:#444; }
+          ::-webkit-scrollbar { width:4px; }
+          ::-webkit-scrollbar-thumb { background:#333; border-radius:4px; }
+          input:focus, textarea:focus { border-color:#e0a820 !important; }
+          @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         `}</style>
 
         <div style={{ maxWidth:720, margin:"0 auto" }}>
 
-          <div style={{ marginBottom:32, display:"flex", alignItems:"flex-start", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
-            <div>
-              <div style={S.logo}>Rate a Mechanic</div>
-              <div style={{ fontSize:13, color:"#555" }}>Find your mechanic and share your experience</div>
-            </div>
-            <button
-              onClick={() => this.setState({ showNearby:true })}
-              style={{ background:"#16181e", border:"1px solid #252830", borderRadius:10, padding:"10px 16px", fontSize:13, fontWeight:600, color:"#f0f0f0", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:8 }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = "#e0a820"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = "#252830"}
-            >
-              📍 Mechanics Near Me
-            </button>
+          {/* Header */}
+          <div style={{ marginBottom:28 }}>
+            <div style={S.logo}>Rate a Mechanic</div>
+            <div style={{ fontSize:13, color:"#555" }}>Find a garage and share your experience</div>
           </div>
 
+          {/* ── Nearby panel ── */}
+          <div style={S.card}>
+            <div style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em", marginBottom:12 }}>
+              📍 Mechanics near you, click to select
+            </div>
+
+            {nearbyLoading ? (
+              <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", color:"#555", fontSize:13 }}>
+                <div style={{ width:24, height:24, border:"2px solid #252830", borderTop:"2px solid #e0a820", borderRadius:"50%", animation:"spin 1s linear infinite", flexShrink:0 }}/>
+                Detecting your location…
+              </div>
+            ) : nearbyError ? (
+              <div style={{ fontSize:13, color:"#555", padding:"8px 0" }}>{nearbyError}</div>
+            ) : nearbyMechanics.length === 0 ? (
+              <div style={{ fontSize:13, color:"#555", padding:"8px 0" }}>No mechanics found within 25 km.</div>
+            ) : (
+              <div style={{ maxHeight:320, overflowY:"auto", margin:"0 -24px", borderTop:"1px solid #252830" }}>
+                {nearbyMechanics.map(m => (
+                  <MechanicRow
+                    key={m.id}
+                    mechanic={m}
+                    distKm={m.distance}
+                    highlight={selectedMechanic?.id === m.id}
+                    onSelect={this.selectMechanic}
+                  />
+                ))}
+              </div>
+            )}
+
+            
+
+            {/* Selected chip — shown inside the nearby panel */}
+            {selectedMechanic && (
+              <div style={{ marginTop:16, display:"flex", alignItems:"center", gap:10, background:"#0e1e0a", border:"1px solid #1a4a0a", borderRadius:10, padding:"10px 14px" }}>
+                <span style={{ fontSize:18 }}>✓</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, color:"#639922", fontWeight:600 }}>{selectedMechanic.name}</div>
+                  {selectedMechanic.address
+                    ? <div style={{ fontSize:11, color:"#3a6a1a", marginTop:2 }}>{selectedMechanic.address}</div>
+                    : <div style={{ fontSize:11, color:"#3a6a1a", marginTop:2 }}>Manually entered</div>
+                  }
+                </div>
+                <button
+                  onClick={this.clearSelection}
+                  style={{ background:"none", border:"1px solid #1a4a0a", borderRadius:6, color:"#639922", cursor:"pointer", fontSize:12, padding:"4px 10px", fontFamily:"inherit" }}
+                >
+                  Change
+                </button>
+                
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: 20,
+                borderTop: "1px solid #252830",
+                paddingTop: 20
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#888",
+                  marginBottom: 10
+                }}
+              >
+                Can't find your mechanic?
+              </div>
+
+              <input
+                value={searchQuery}
+                onChange={this.handleManualName}
+                placeholder="Enter mechanic name manually..."
+                style={S.input}
+              />
+            </div>
+
+            </div>
+
+          {/* ── Review form ── */}
           <div style={S.card}>
             {editId && (
               <div style={S.editBanner}>
@@ -334,53 +397,8 @@ class Mechanic extends React.Component {
             )}
 
             <div style={{ marginBottom:20 }}>
-              <label style={S.label}>Find Mechanic / Garage</label>
-              <div style={{ position:"relative" }}>
-                <input
-                  value={searchQuery}
-                  onChange={e => this.setState({ searchQuery:e.target.value, selectedMechanic:null })}
-                  onKeyDown={e => e.key === "Enter" && this.searchMechanics()}
-                  placeholder="Search by name or garage…"
-                  style={S.input}
-                />
-                <button onClick={this.searchMechanics} style={S.searchBtn}>
-                  {searchLoading ? "…" : "Search"}
-                </button>
-              </div>
-
-              {mechanics.length > 0 && (
-                <div style={{ background:"#1a1c22", border:"1px solid #252830", borderRadius:10, marginTop:6, overflow:"hidden" }}>
-                  {mechanics.map((m, i) => (
-                    <div
-                      key={i}
-                      onClick={() => this.selectMechanic(m)}
-                      style={{ padding:"12px 16px", cursor:"pointer", borderBottom:i < mechanics.length-1?"1px solid #252830":"none", display:"flex", alignItems:"center", gap:12 }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#252830"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                    >
-                      <div style={S.mechanicIcon}>🔧</div>
-                      <div>
-                        <div style={{ fontSize:14, fontWeight:600 }}>{m.name || m.username}</div>
-                        {m.location && <div style={{ fontSize:11, color:"#555" }}>{m.location}</div>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {searchError && <div style={{ fontSize:12, color:"#E24B4A", marginTop:6 }}>{searchError}</div>}
-
-              {selectedMechanic && (
-                <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, background:"#0e1e0a", border:"1px solid #1a4a0a", borderRadius:8, padding:"8px 12px" }}>
-                  <span style={{ fontSize:16 }}>✓</span>
-                  <span style={{ fontSize:13, color:"#639922", fontWeight:600 }}>{selectedMechanic.name || selectedMechanic.username} selected</span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginBottom:20 }}>
               <label style={S.label}>Type of Job <span style={{ color:"#555", fontWeight:400 }}>(optional)</span></label>
-              <input value={jobType} onChange={e => this.setState({ jobType:e.target.value })} placeholder="e.g. Oil change, Brake service, Full service…" style={S.input}/>
+              <input value={jobType} onChange={e => this.setState({ jobType:e.target.value })} placeholder="e.g. Oil change, Brake service, Annual service…" style={S.input}/>
             </div>
 
             <div style={{ marginBottom:20 }}>
@@ -393,80 +411,43 @@ class Mechanic extends React.Component {
 
             <div style={{ marginBottom:24 }}>
               <label style={S.label}>Your Review</label>
-              <textarea
-                value={comment}
-                onChange={e => this.setState({ comment:e.target.value })}
-                placeholder="Describe your experience — quality of work, professionalism, value for money…"
-                rows={4}
-                style={{ ...S.input, resize:"vertical", lineHeight:1.6 }}
-              />
+              <textarea value={comment} onChange={e => this.setState({ comment:e.target.value })} placeholder="Describe your experience — quality of work, value, professionalism…" rows={4} style={{ ...S.input, resize:"vertical", lineHeight:1.6 }}/>
             </div>
 
             {saveStatus && (
-              <div style={{ background:saveStatus.success?"#0e1e0a":"#2a1010", border:`1px solid ${saveStatus.success?"#1a4a0a":"#5a1a1a"}`, borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13, color:saveStatus.success?"#639922":"#E24B4A" }}>
-                {saveStatus.msg}
+              <div style={{ background:saveStatus.success?"#0e1e0a":"#2a1010", border:`1px solid ${saveStatus.success?"#1a4a0a":"#5a1a1a"}`, borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13, color:saveStatus.success?"#639922":"#E24B4A", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                <span>{saveStatus.success ? `✓ ${saveStatus.msg}` : saveStatus.msg}</span>
+                <button onClick={this.dismissSaveStatus} style={{ background:"none", border:"none", color:"inherit", cursor:"pointer", fontSize:16, lineHeight:1, padding:"0 2px", opacity:0.7, fontFamily:"inherit" }} aria-label="Dismiss">×</button>
               </div>
             )}
 
-            <button onClick={this.submitReview} disabled={saving} style={{ ...S.submitBtn, opacity:saving?0.7:1, cursor:saving?"not-allowed":"pointer" }}>
+            <button onClick={this.submitReview} disabled={saving} style={{ background:"#e0a820", border:"none", borderRadius:10, padding:"12px 24px", fontSize:14, fontWeight:700, color:"#0d0f12", fontFamily:"inherit", cursor:saving?"not-allowed":"pointer", opacity:saving?0.7:1 }}>
               {saving ? "Saving…" : editId ? "Update Review →" : "Submit Review →"}
             </button>
           </div>
 
-          <div style={{ marginTop:32 }}>
+          {/* ── Reviews list ── */}
+          <div style={{ marginTop:8 }}>
             <div style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em", marginBottom:16 }}>
               {reviews.length > 0 ? `${reviews.length} Review${reviews.length !== 1 ? "s" : ""}` : "No reviews yet"}
             </div>
-
             {reviewsLoading ? (
-              <div style={{ textAlign:"center", padding:"40px 0", color:"#555", fontSize:13 }}>Loading reviews…</div>
+              <div style={{ textAlign:"center", padding:"48px 0", color:"#555", fontSize:13 }}>Loading reviews…</div>
             ) : reviews.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"40px 0", color:"#555", fontSize:13 }}>
+              <div style={{ textAlign:"center", padding:"48px 20px", color:"#555", fontSize:13 }}>
                 <div style={{ fontSize:40, marginBottom:12, opacity:0.3 }}>🔧</div>
-                Be the first to rate a mechanic.
+                Pick a mechanic above and leave your first review.
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                {reviews.map(r => {
-                  const stars = r.rating || r.star || 0;
-                  return (
-                    <div key={r.id} style={S.reviewCard}>
-                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, marginBottom:10 }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                          <div style={S.mechanicIcon}>🔧</div>
-                          <div>
-                            <div style={{ fontSize:15, fontWeight:600 }}>{r.mechanicName || r.mechanic || "Mechanic"}</div>
-                            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:3 }}>
-                              <StarPicker value={stars} readonly/>
-                              {stars > 0 && <span style={{ fontSize:11, color:STAR_COLORS[stars-1], fontWeight:600 }}>{STAR_LABELS[stars-1]}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                          <button onClick={() => this.editReview(r)}      style={S.editBtn}>Edit</button>
-                          <button onClick={() => this.deleteReview(r.id)} style={S.deleteBtn}>Delete</button>
-                        </div>
-                      </div>
-
-                      {r.jobType && <div style={S.jobTag}>{r.jobType}</div>}
-
-                      <p style={{ fontSize:13, color:"#aaa", lineHeight:1.7 }}>{r.comment}</p>
-
-                      {r.createdAt && (
-                        <div style={{ fontSize:11, color:"#444", marginTop:10 }}>
-                          {new Date(r.createdAt).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {reviews.map(r => <ReviewCard key={r.id} review={r} onEdit={this.editReview} onDelete={this.deleteReview}/>)}
               </div>
             )}
           </div>
-        </div>
 
-        {showNearby && <NearbyProviders onClose={() => this.setState({ showNearby:false })}/>}
+        </div>
       </div>
+      
     );
   }
 }

@@ -12,13 +12,15 @@ import { API_URL } from "./Utils/Configuration";
 import "./App.css";
 
 const PROTECTED_PAGES = ["MY_CAR", "CAR", "MECHANIC", "HISTORY"];
-const BUILD_MARKER = "CARCARE BUILD v2";
 
-function NavLink({ onClick, children, danger }) {
+function NavLink({ onClick, children, danger, active }) {
   return (
-    <a onClick={(e) => { e.preventDefault(); onClick?.(); }} href="#" className={`nav-link${danger ? " nav-link--danger" : ""}`}>
+    <div
+      onClick={onClick}
+      className={`nav-link${danger ? " nav-link--danger" : ""}${active ? " nav-link--active" : ""}`}
+    >
       {children}
-    </a>
+    </div>
   );
 }
 
@@ -29,6 +31,7 @@ class App extends Component {
     sessionChecked: false,
     cars:           [],
     allScheduled:   {},
+    serviceLog:     [],
     garageLoaded:   false,
     garageError:    "",
   };
@@ -62,11 +65,19 @@ class App extends Component {
         this.setState({ cars:loaded, allScheduled:sched, garageLoaded:true, garageError:"" });
       })
       .catch(() => this.setState({ garageError:"Could not load your cars.", garageLoaded:true }));
+
+    axiosAuth.get(`${API_URL}/cars/service-log`)
+      .then(res => this.setState({ serviceLog: Array.isArray(res.data) ? res.data : [] }))
+      .catch(() => this.setState({ serviceLog: [] }));
   };
 
   saveScheduled = (carId, scheduled) => {
     axiosAuth.post(`${API_URL}/cars/${carId}/scheduled`, scheduled)
       .catch(() => this.setState({ garageError:"Could not save schedule. Please try again." }));
+  };
+
+  handleServiceLogged = (entry) => {
+    this.setState(prev => ({ serviceLog: [...prev.serviceLog, entry] }));
   };
 
   handleAddCar = (saved) => {
@@ -119,13 +130,19 @@ class App extends Component {
     });
   };
 
+  handleServiceLogRemoved = (logId) => {
+    this.setState(prev => ({
+      serviceLog: prev.serviceLog.filter(l => l.id !== logId),
+    }));
+  };
+
   handleLogout = async () => {
     try {
       await axios.get(`${API_URL}/users/logout`, { withCredentials:true });
     } finally {
       this.setState({
         user:null, currentPage:"MY_CAR",
-        cars:[], allScheduled:{}, garageLoaded:false, garageError:"",
+        cars:[], allScheduled:{}, serviceLog:[], garageLoaded:false, garageError:"",
       });
     }
   };
@@ -157,6 +174,7 @@ class App extends Component {
         <MyCar
           cars={cars}
           allScheduled={allScheduled}
+          serviceLog={this.state.serviceLog}
           garageLoaded={garageLoaded}
           garageError={garageError}
           onAddCar={this.handleAddCar}
@@ -165,6 +183,8 @@ class App extends Component {
           onDate={this.handleDate}
           onComplete={this.handleComplete}
           onClearError={() => this.setState({ garageError:"" })}
+          onServiceLogged={this.handleServiceLogged}
+          onServiceLogRemoved={this.handleServiceLogRemoved}
           saveScheduled={this.saveScheduled}
         />
       );
@@ -174,7 +194,7 @@ class App extends Component {
       return (
         <History
           cars={cars}
-          allScheduled={allScheduled}
+          serviceLog={this.state.serviceLog}
           garageLoaded={garageLoaded}
         />
       );
@@ -189,39 +209,40 @@ class App extends Component {
   }
 
   render() {
-    const { user, allScheduled } = this.state;
-
-    const totalCompleted = Object.values(allScheduled).reduce(
-      (sum, car) => sum + Object.values(car).filter(s => s.completed).length, 0
-    );
+    const { user } = this.state;
 
     return (
       <div id="APP">
         <nav className="navbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <a onClick={() => this.setPage("ABOUT")} href="#" className="navbar-brand">CARCARE</a>
-            <span style={{ fontSize: 12, color: '#999' }}>{BUILD_MARKER}</span>
+            <div
+              onClick={() => this.setPage("ABOUT")}
+              
+              className="navbar-brand"
+            >
+              <img
+                src="/icons/cycle1.png"
+                alt="CARCARE"
+                className="navbar-logo"
+              />
+
+              CARCARE
+            </div>
+            
           </div>
           <div className="navbar-links">
             {user ? (
               <>
-                <NavLink onClick={() => this.setPage("MY_CAR")}>My Car</NavLink>
-                <NavLink onClick={() => this.setPage("CAR")}>Car</NavLink>
-                <NavLink onClick={() => this.setPage("MECHANIC")}>Mechanic</NavLink>
-                <span style={{ position:"relative", display:"inline-flex", alignItems:"center" }}>
-                  <NavLink onClick={() => this.setPage("HISTORY")}>History</NavLink>
-                  {totalCompleted > 0 && (
-                    <span style={{ position:"absolute", top:-6, right:-10, background:"#639922", color:"#fff", fontSize:9, fontWeight:700, borderRadius:"50%", width:15, height:15, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-                      {totalCompleted > 9 ? "9+" : totalCompleted}
-                    </span>
-                  )}
-                </span>
+                <NavLink onClick={() => this.setPage("MY_CAR")}active={this.state.currentPage === "MY_CAR"}>My Car</NavLink>
+                <NavLink onClick={() => this.setPage("CAR")}active={this.state.currentPage === "CAR"}>Car</NavLink>
+                <NavLink onClick={() => this.setPage("MECHANIC")}active={this.state.currentPage === "MECHANIC"}>Mechanic</NavLink>
+                <NavLink onClick={() => this.setPage("HISTORY")}active={this.state.currentPage === "HISTORY"}>History</NavLink>
                 <NavLink onClick={this.handleLogout} danger>Log out</NavLink>
               </>
             ) : (
               <>
-                <NavLink onClick={() => this.setPage("SIGNUP")}>Sign up</NavLink>
-                <NavLink onClick={() => this.setPage("LOGIN")}>Log in</NavLink>
+                <NavLink onClick={() => this.setPage("SIGNUP")}active={this.state.currentPage === "SIGNUP"}>Sign up</NavLink>
+                <NavLink onClick={() => this.setPage("LOGIN")}active={this.state.currentPage === "LOGIN"}>Log in</NavLink>
               </>
             )}
           </div>
