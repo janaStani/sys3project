@@ -69,13 +69,14 @@ if (DB_TYPE === 'sqlite') {
         CREATE TABLE IF NOT EXISTS Review (
             reviewId INTEGER PRIMARY KEY AUTOINCREMENT,
             userId INTEGER NOT NULL,
-            mechanicId TEXT NOT NULL,
+            providerId INTEGER,
             mechanicName TEXT NOT NULL,
             rating INTEGER NOT NULL,
             comment TEXT NOT NULL,
             jobType TEXT,
             createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(userId) REFERENCES User(userId) ON DELETE CASCADE
+            FOREIGN KEY (providerId) REFERENCES ServiceProvider(providerId) ON DELETE SE
         );
 
     `);
@@ -91,7 +92,7 @@ if (DB_TYPE === 'sqlite') {
     }
 
     const insertProvider = sqlite.prepare(
-        'INSERT IGNORE INTO ServiceProvider (provider, priceRange, rating, location) VALUES (?, ?, ?, ?)'
+        'INSERT OR IGNORE INTO ServiceProvider (provider, priceRange, rating, location) VALUES (?, ?, ?, ?)'
     );
     insertProvider.run('CarCare Local Garage', '€40–€120', 4.6, 'Local Service Center');
 
@@ -178,8 +179,11 @@ if (DB_TYPE === 'sqlite') {
         ORDER BY s.userAdded DESC, avgRating DESC
     `, []);
 
+// instead of hardcoding one syntax, pick based on DB_TYPE:
+const INSERT_IGNORE = DB_TYPE === 'sqlite' ? 'INSERT OR IGNORE' : 'INSERT IGNORE';
+
 DB.addProvider = (name, address, phone) => query(
-    'INSERT IGNORE INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)',
+    `${INSERT_IGNORE} INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)`,
     [name, address || '', phone || '']
 );
 
@@ -231,6 +235,10 @@ DB.updateReview = (reviewId, userId, rating, comment, jobType) => query(
 DB.deleteReview = (reviewId, userId) => query(
     'DELETE FROM Review WHERE reviewId = ? AND userId = ?',
     [reviewId, userId]
+);
+DB.getUserReviewForProvider = (userId, providerId) => query(
+    'SELECT reviewId FROM Review WHERE userId = ? AND providerId = ?',
+    [userId, providerId]
 );
 
 module.exports = DB;
