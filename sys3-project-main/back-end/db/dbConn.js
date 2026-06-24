@@ -91,7 +91,7 @@ if (DB_TYPE === 'sqlite') {
     }
 
     const insertProvider = sqlite.prepare(
-        'INSERT OR IGNORE INTO ServiceProvider (provider, priceRange, rating, location) VALUES (?, ?, ?, ?)'
+        'INSERT IGNORE INTO ServiceProvider (provider, priceRange, rating, location) VALUES (?, ?, ?, ?)'
     );
     insertProvider.run('CarCare Local Garage', '€40–€120', 4.6, 'Local Service Center');
 
@@ -179,7 +179,7 @@ if (DB_TYPE === 'sqlite') {
     `, []);
 
 DB.addProvider = (name, address, phone) => query(
-    'INSERT OR IGNORE INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)',
+    'INSERT IGNORE INTO ServiceProvider (provider, location, priceRange, userAdded) VALUES (?, ?, ?, 1)',
     [name, address || '', phone || '']
 );
 
