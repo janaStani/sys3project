@@ -146,6 +146,16 @@ async function fetchOSMMechanics(coords, radius = 25000) {
     .filter(el => el.lat && el.lng);
 }
 
+async function geocodeZipcode(zipcode) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zipcode)}&country=SI&format=json&limit=1`,
+    { headers: { "Accept-Language": "en" } }
+  );
+  const data = await res.json();
+  if (!data.length) return null;
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+}
+
 function Field({ label, children }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
@@ -385,39 +395,49 @@ function NearbyProviders({ event, onClose }) {
   const [phase,         setPhase]         = useState("locating"); // locating | loading | done | error
   const [locError,      setLocError]      = useState("");
 
-  const { svc, car, date } = event || {};
+  const { svc, car, date, user: currentUser } = event || {};
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocError("Geolocation not supported — showing all saved providers.");
+    async function init() {
       setPhase("loading");
-      loadDbProviders(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setCoords(c);
-        setPhase("loading");
-        Promise.all([
-          fetchOSMMechanics(c).catch(() => []),
-          loadDbProviders(c),
-        ]).then(([osm]) => {
-          setOsmMechanics(
-            osm
-              .map(m => ({ ...m, distance: distanceKm(c.lat, c.lng, m.lat, m.lng) }))
-              .sort((a, b) => a.distance - b.distance)
-          );
-          setPhase("done");
-        });
-      },
-      () => {
-        setLocError("Location access denied — showing saved providers.");
-        setPhase("loading");
+
+      // Try browser geolocation first (works on HTTPS)
+      const tryGeo = () => new Promise(resolve => {
+        if (!navigator.geolocation || location.protocol !== 'https:') return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          ()  => resolve(null),
+          { timeout: 8000 }
+        );
+      });
+
+      let c = await tryGeo();
+
+      // Fall back to zipcode geocoding
+      if (!c && event?.user?.zipcode) {
+        c = await geocodeZipcode(event.user.zipcode).catch(() => null);
+        if (c) setLocError("Using location from your account zipcode.");
+      }
+
+      if (!c) {
+        setLocError("Location unavailable — showing saved providers.");
         loadDbProviders(null).then(() => setPhase("done"));
-      },
-      { timeout: 8000 }
-    );
+        return;
+      }
+
+      setCoords(c);
+      const [osm] = await Promise.all([
+        fetchOSMMechanics(c).catch(() => []),
+        loadDbProviders(c),
+      ]);
+      setOsmMechanics(
+        osm.map(m => ({ ...m, distance: distanceKm(c.lat, c.lng, m.lat, m.lng) }))
+          .sort((a, b) => a.distance - b.distance)
+      );
+      setPhase("done");
+    }
+
+    init();
   }, []);
 
   function loadDbProviders(c) {
