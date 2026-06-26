@@ -806,19 +806,20 @@ export default function CarModels() {
           .search-in:focus { border-color: #e0a820; }
         `}</style>
 
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px 20px 60px" }}>
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 40, letterSpacing: "0.08em", color: "#e0a820", lineHeight: 1 }}>
-              CARCARE
-            </div>
-            <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 20px 80px" }}>
+          
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820" }}>Catalogue</div>
+          </div>
+
+          <div style={{ fontSize: 14, color: "#666", marginBottom: 24}}>
               Browse specifications by generation
             </div>
-          </div>
+        
 
           <div style={{ position: "relative", marginBottom: 16 }}>
             <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: "#555" }}><img src="/icons/magnifying-glass.png" alt="Search" style={{
-              position: "absolute",top: "50%",transform: "translateY(-50%)",width: 25,height: 25,}}/></span>
+              position: "absolute",top: "50%",transform: "translateY(-50%)",width: 25,height: 25,gap: 5}}/></span>
             <input
               className="search-in"
               placeholder="Search make or model…"

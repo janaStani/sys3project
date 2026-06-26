@@ -63,8 +63,6 @@ const STAR_COLORS = ["#E24B4A", "#e07820", "#e0a820", "#a0c030", "#639922"];
 const STAR_LABELS = ["Terrible", "Poor", "OK", "Good", "Excellent"];
 
 const S = {
-  page:      { fontFamily:"'DM Sans', system-ui, sans-serif", minHeight:"100vh", background:"#0d0f12", color:"#f0f0f0", padding:"32px 20px 80px" },
-  logo:      { fontFamily:"'Bebas Neue', sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820", marginBottom:4 },
   card:      { background:"#16181e", border:"1px solid #252830", borderRadius:16, padding:24, marginBottom:32 },
   label:     { fontSize:11, color:"#888", textTransform:"uppercase", letterSpacing:".08em", marginBottom:8, display:"block" },
   input:     { width:"100%", background:"#0d0f12", border:"1px solid #252830", borderRadius:10, padding:"11px 14px", fontSize:14, color:"#f0f0f0", fontFamily:"inherit", outline:"none", boxSizing:"border-box" },
@@ -72,6 +70,19 @@ const S = {
   jobTag:    { fontSize:11, color:"#e0a820", background:"#1e1a08", border:"1px solid #4a3a10", borderRadius:20, padding:"2px 10px", display:"inline-block", marginBottom:8 },
   editBtn:   { background:"none", border:"1px solid #252830", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#888", cursor:"pointer", fontFamily:"inherit" },
   deleteBtn: { background:"none", border:"1px solid #5a1a1a", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#E24B4A", cursor:"pointer", fontFamily:"inherit" },
+};
+
+const TAB_ICONS = {
+  garage: "/icons/car-repair (1).png",
+  calendar: "/icons/calendar.png",
+  calendar1: "/icons/calendar1.png",
+  load: "/icons/hourglass.png",
+  location: "/icons/pin.png",
+  technician: "/icons/technician.png",
+  search: "/icons/magnifying-glass.png",
+  phone: "/icons/phone-call.png",
+  website: "/icons/link (1).png",
+  car: "/icons/car.png",
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -99,7 +110,7 @@ function MechanicRow({ mechanic, onSelect, distKm, highlight }) {
       onMouseEnter={e => e.currentTarget.style.background = "#1e2028"}
       onMouseLeave={e => e.currentTarget.style.background = highlight?"#1e2028":"transparent"}
     >
-      <div style={{ width:38, height:38, borderRadius:10, background:"#0d0f12", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🔧</div>
+      <div style={{ width:45, height:45, borderRadius:10, background:"#0d0f12", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}><img src={TAB_ICONS.technician} style={{width: 30, height:30}}/></div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:14, fontWeight:600 }}>{mechanic.name}</div>
         {mechanic.address && <div style={{ fontSize:11, color:"#555", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{mechanic.address}</div>}
@@ -118,7 +129,7 @@ function ReviewCard({ review: r, onEdit, onDelete }) {
     <div style={{ background:"#16181e", border:"1px solid #252830", borderRadius:14, padding:18 }}>
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, marginBottom:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{ width:40, height:40, borderRadius:10, background:"#0d0f12", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>🔧</div>
+          <div style={{ width:45, height:45, borderRadius:10, background:"#0d0f12", border:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}><img src={TAB_ICONS.technician} style={{width: 30, height:30}}/></div>
           <div>
             <div style={{ fontSize:15, fontWeight:600, marginBottom:3 }}>{r.mechanicName}</div>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -240,7 +251,7 @@ class Mechanic extends React.Component {
 
   selectMechanic = (m) => {
     if (this.searchTimeout) clearTimeout(this.searchTimeout);
-    this.setState({ selectedMechanic: m, searchQuery: ""});
+    this.setState({ selectedMechanic:{ ...m, manual: false}, searchQuery: ""});
   };
 
   clearSelection = () => {
@@ -337,7 +348,7 @@ class Mechanic extends React.Component {
     const { userCoords, nearbyMechanics, nearbyLoading, nearbyError, nearbyInfo, searchQuery, selectedMechanic, rating, comment, jobType, saving, saveStatus, editId, reviews, reviewsLoading } = this.state;
 
     return (
-      <div style={S.page}>
+      <div style={{ fontFamily:"'DM Sans',system-ui,sans-serif", minHeight:"100vh", background:"#0d0f12", color:"#f0f0f0" }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap');
           * { box-sizing:border-box; margin:0; padding:0; }
@@ -348,18 +359,20 @@ class Mechanic extends React.Component {
           @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         `}</style>
 
-        <div style={{ maxWidth:720, margin:"0 auto" }}>
+        <div style={{ maxWidth:900, margin:"0 auto", padding: "28px 20px 80px"  }}>
 
-          {/* Header */}
-          <div style={{ marginBottom:28 }}>
-            <div style={S.logo}>Rate a Mechanic</div>
-            <div style={{ fontSize:13, color:"#555" }}>Find a garage and share your experience</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820" }}>Rate a mechanic</div>
           </div>
+          
+          <div style={{ fontSize: 14, color: "#666", marginBottom: 24}}>Find a garage and share your experience</div>
 
-          {/* ── Nearby panel ── */}
+          
+
+          
           <div style={S.card}>
-            <div style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em", marginBottom:12 }}>
-              📍 Mechanics near you, click to select
+            <div style={{ fontSize:12, color:"#888", textTransform:"uppercase", letterSpacing:".08em", marginBottom:20 }}>
+              <img src={TAB_ICONS.location} alt="location" style={{width:16, height:16, verticalAlign: 'middle'}}/> Mechanics near you, click to select
             </div>
 
             {nearbyInfo && (
@@ -390,44 +403,25 @@ class Mechanic extends React.Component {
             )}
 
             
-
-            {/* Selected chip — shown inside the nearby panel */}
             {selectedMechanic && (
               <div style={{ marginTop:16, display:"flex", alignItems:"center", gap:10, background:"#0e1e0a", border:"1px solid #1a4a0a", borderRadius:10, padding:"10px 14px" }}>
                 <span style={{ fontSize:18 }}>✓</span>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:13, color:"#639922", fontWeight:600 }}>{selectedMechanic.name}</div>
-                  {selectedMechanic.address
-                    ? <div style={{ fontSize:11, color:"#3a6a1a", marginTop:2 }}>{selectedMechanic.address}</div>
-                    : <div style={{ fontSize:11, color:"#3a6a1a", marginTop:2 }}>Manually entered</div>
-                  }
+                  {selectedMechanic.address ? (
+                    <div style={{ fontSize:11, color:"#3a6a1a", marginTop:2 }}>{selectedMechanic.address}</div>
+                  ) : selectedMechanic.manual ? (
+                    <div style={{ fontSize:11, color:"#3a6a1a", marginTop:2 }}>Manually entered</div>
+                  ) : null}
                 </div>
-                <button
-                  onClick={this.clearSelection}
-                  style={{ background:"none", border:"1px solid #1a4a0a", borderRadius:6, color:"#639922", cursor:"pointer", fontSize:12, padding:"4px 10px", fontFamily:"inherit" }}
-                >
-                  Change
-                </button>
-                
+                <button onClick={this.clearSelection} style={{ background:"none", border:"1px solid #5a1a1a", borderRadius:6, color:"#E24B4A", cursor:"pointer", fontSize:12, padding:"4px 10px", fontFamily:"inherit" }}>
+                  x</button>
               </div>
             )}
 
-            <div
-              style={{
-                marginTop: 20,
-                borderTop: "1px solid #252830",
-                paddingTop: 20
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#888",
-                  marginBottom: 10
-                }}
-              >
-                Can't find your mechanic?
-              </div>
+            <div style={{marginTop: 20,borderTop: "1px solid #252830",paddingTop: 20}}>
+              <div style={{fontSize: 12,color: "#888",marginBottom: 10}}>
+                Can't find your mechanic?</div>
 
               <input
                 value={searchQuery}

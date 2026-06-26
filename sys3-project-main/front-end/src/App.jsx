@@ -95,6 +95,35 @@ class App extends Component {
     });
   };
 
+  refreshCars = () => {
+  console.log("Refreshing cars from server...");
+  axiosAuth.get(`${API_URL}/cars`)
+    .then(res => {
+      const loaded = res.data || [];
+      const sched = {};
+      loaded.forEach(c => {
+        sched[c.id] = c.scheduled
+          ? typeof c.scheduled === "string" ? JSON.parse(c.scheduled) : c.scheduled
+          : {};
+      });
+      this.setState({ cars: loaded, allScheduled: sched });
+      console.log("Cars refreshed:", loaded);
+    })
+    .catch(err => console.error("Failed to refresh cars:", err));
+};
+
+  handleEditCar = (updatedCar) => {
+    console.log("handleEditCar called with:", updatedCar);
+    this.setState(prevState => ({
+      cars: prevState.cars.map(car => 
+        car.id === updatedCar.id ? { ...updatedCar } : car
+      )
+    }), () => {
+      
+      this.refreshCars();
+    });
+  };
+
   handleToggle = (carId, svcId, val) => {
     this.setState(prev => {
       const carSchedule = {
@@ -178,6 +207,8 @@ class App extends Component {
           garageLoaded={garageLoaded}
           garageError={garageError}
           onAddCar={this.handleAddCar}
+          onEditCar={this.handleEditCar}
+          onRefreshCars={this.refreshCars} 
           onDeleteCar={this.handleDeleteCar}
           onToggle={this.handleToggle}
           onDate={this.handleDate}
@@ -235,9 +266,9 @@ class App extends Component {
             {user ? (
               <>
                 <NavLink onClick={() => this.setPage("MY_CAR")}active={this.state.currentPage === "MY_CAR"}>My Car</NavLink>
-                <NavLink onClick={() => this.setPage("CAR")}active={this.state.currentPage === "CAR"}>Car</NavLink>
-                <NavLink onClick={() => this.setPage("MECHANIC")}active={this.state.currentPage === "MECHANIC"}>Mechanic</NavLink>
                 <NavLink onClick={() => this.setPage("HISTORY")}active={this.state.currentPage === "HISTORY"}>History</NavLink>
+                <NavLink onClick={() => this.setPage("MECHANIC")}active={this.state.currentPage === "MECHANIC"}>Mechanic</NavLink>
+                <NavLink onClick={() => this.setPage("CAR")}active={this.state.currentPage === "CAR"}>Cars</NavLink>
                 <NavLink onClick={this.handleLogout} danger>Log out</NavLink>
               </>
             ) : (

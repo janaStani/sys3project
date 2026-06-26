@@ -30,7 +30,8 @@ const TAB_ICONS = {
   technician: "/icons/technician.png",
   search: "/icons/magnifying-glass.png",
   phone: "/icons/phone-call.png",
-  website: "/icons/link (1).png"
+  website: "/icons/link (1).png",
+  car: "/icons/car.png",
 };
 
 const STATUS_STYLES = {
@@ -292,6 +293,131 @@ function AddCarModal({ onAdd, onClose, saving }) {
           <button onClick={submit} disabled={saving}
             style={{ background:"#e0a820", border:"none", borderRadius:10, padding:12, fontSize:15, fontWeight:700, color:"#0d0f12", cursor:saving?"not-allowed":"pointer" }}>
             {saving ? "Saving..." : "Add to my garage →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── EDIT CAR MODAL ─────────────────────────────────────────────────────────────
+function EditCarModal({ car, onSave, onClose, saving }) {
+  const [form, setForm] = useState({ 
+    make: car.make, 
+    model: car.model, 
+    year: car.year, 
+    mileage: car.mileage,
+    fuelType: car.fuelType || ""
+  });
+  const [err, setErr] = useState("");
+
+  const availableModels = CAR_MODELS.filter(c => c.make === form.make);
+  const selectedCarDef = CAR_MODELS.find(c => c.make === form.make && c.model === form.model);
+
+  const yearOptions = useMemo(() => {
+    if (!selectedCarDef?.years?.length) return [];
+    const years = new Set();
+    selectedCarDef.years.forEach(gen => {
+      const end = gen.yearEnd ?? new Date().getFullYear();
+      for (let y = gen.yearStart; y <= end; y++) years.add(y);
+    });
+    return [...years].sort((a, b) => a - b);
+  }, [selectedCarDef]);
+
+  const selectedGen = useMemo(() => {
+    if (!selectedCarDef?.years?.length || !form.year) return null;
+    return selectedCarDef.years.find(
+      g => parseInt(form.year) >= g.yearStart && parseInt(form.year) <= (g.yearEnd ?? Infinity)
+    ) || null;
+  }, [selectedCarDef, form.year]);
+
+  const fuelOptions = useMemo(() => {
+    if (!selectedGen?.fuelType) return [];
+    return selectedGen.fuelType.split(",").map(f => f.trim()).filter(Boolean);
+  }, [selectedGen]);
+
+  function setField(key, value) { setForm(f => ({ ...f, [key]: value })); }
+
+  function submit() {
+    if (!selectedCarDef) { setErr("Please select a valid car."); return; }
+    if (!form.year) { setErr("Please select a year."); return; }
+    if (form.mileage === "" || form.mileage < 0) { setErr("Please enter current mileage."); return; }
+    
+    onSave({
+      id: car.id,
+      make: selectedCarDef.make,
+      model: selectedCarDef.model,
+      type: selectedCarDef.type,
+      fuelType: form.fuelType || selectedGen?.fuelType || selectedCarDef.years?.[0]?.fuelType || "Petrol",
+      year: parseInt(form.year),
+      mileage: parseInt(form.mileage),
+    });
+  }
+
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, zIndex:200 }}>
+      <div style={{ background:"#1a1c22", border:"1px solid #333", borderRadius:16, width:"100%", maxWidth:460 }}>
+        <div style={{ padding:"20px 20px 0", display:"flex", justifyContent:"space-between", marginBottom:20 }}>
+          <div style={{ fontSize:18, fontWeight:600 }}>Edit car</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:"#888", fontSize:24, cursor:"pointer" }}>×</button>
+        </div>
+        <div style={{ padding:"0 20px 20px", display:"flex", flexDirection:"column", gap:14 }}>
+          <Field label="Make">
+            <select value={form.make}
+              onChange={e => setForm({ make:e.target.value, model:"", year:"", mileage:form.mileage, fuelType:"" })}
+              style={INPUT_STYLE}>
+              {[...new Set(CAR_MODELS.map(c => c.make))].map(make => <option key={make}>{make}</option>)}
+            </select>
+          </Field>
+          <Field label="Model">
+            <select value={form.model}
+              onChange={e => setForm(f => ({ ...f, model: e.target.value, year: "", fuelType: "" }))}
+              style={INPUT_STYLE}>
+              <option value="">Select model</option>
+              {[...new Set(availableModels.map(c => c.model))].map(model => <option key={model}>{model}</option>)}
+            </select>
+          </Field>
+          <Field label="Year">
+            <select value={form.year} onChange={e => setField("year", e.target.value)} style={INPUT_STYLE} disabled={!selectedCarDef}>
+              <option value="">Select year</option>
+              {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </Field>
+          {selectedGen && (
+            <div style={{ background:"#16181e", border:"1px solid #252830", borderRadius:10, padding:14 }}>
+              <div style={{ fontSize:12, color:"#e0a820", fontWeight:600, marginBottom:6 }}>
+                {selectedGen.generation} ({selectedGen.yearStart}–{selectedGen.yearEnd ?? "present"})
+              </div>
+              <div style={{ fontSize:13, color:"#ccc", marginBottom:2 }}><strong style={{ color:"#888" }}>Type:</strong> {selectedCarDef.type}</div>
+              <div style={{ fontSize:13, color:"#ccc", marginBottom:2 }}><strong style={{ color:"#888" }}>Fuel:</strong> {selectedGen.fuelType}</div>
+              <div style={{ fontSize:13, color:"#ccc", marginBottom:2 }}><strong style={{ color:"#888" }}>Power:</strong> {selectedGen.power}</div>
+              <div style={{ fontSize:12, color:"#555", marginTop:6 }}>
+                {Array.isArray(selectedGen.engine) ? selectedGen.engine.join(" · ") : selectedGen.engine}
+              </div>
+            </div>
+          )}
+          {fuelOptions.length > 1 && (
+            <Field label="Fuel type">
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {fuelOptions.map(f => (
+                  <button key={f} type="button" onClick={() => setField("fuelType", f)}
+                    style={{ background:form.fuelType===f?"#e0a820":"#16181e", border:`1px solid ${form.fuelType===f?"#e0a820":"#252830"}`, borderRadius:20, padding:"6px 14px", fontSize:13, fontWeight:form.fuelType===f?700:400, color:form.fuelType===f?"#0d0f12":"#ccc", cursor:"pointer", fontFamily:"inherit" }}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          )}
+          <Field label="Current mileage (km)">
+            <input type="number" value={form.mileage} onChange={e => setField("mileage", e.target.value)} min="0" style={INPUT_STYLE}/>
+          </Field>
+          {err && (
+            <div style={{ fontSize:12, color:"#E24B4A", padding:"8px 12px", background:"#2a1010", border:"1px solid #5a1a1a", borderRadius:8 }}>{err}</div>
+          )}
+          <button onClick={submit} disabled={saving}
+            style={{ background:"#e0a820", border:"none", borderRadius:10, padding:12, fontSize:15, fontWeight:700, color:"#0d0f12", cursor:saving?"not-allowed":"pointer" }}>
+            {saving ? "Saving..." : "Save changes →"}
           </button>
         </div>
       </div>
@@ -728,7 +854,7 @@ function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete }) {
           </div>
           <button onClick={() => onToggle(svc.id, true)}
             style={{ background:"#e0a820", border:"none", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit" }}>
-            Schedule service
+            Add to calendar
           </button>
         </div>
       )}
@@ -781,7 +907,7 @@ function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete }) {
   );
 }
 
-function CarCard({ car, serviceLog, onDelete, scheduled, onToggle, onDate, onComplete, deleting }) {
+function CarCard({ car, serviceLog, onDelete, onEdit, scheduled, onToggle, onDate, onComplete, deleting }) {
   const [open, setOpen] = useState(false);
   const schedule = useMemo(() => generateSchedule(car, serviceLog), [car, serviceLog]);
   const statusCounts = useMemo(() => ({
@@ -889,10 +1015,16 @@ function CarCard({ car, serviceLog, onDelete, scheduled, onToggle, onDate, onCom
               <span style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em" }}>
                 Maintenance · {schedule.length} items
               </span>
-              <button onClick={e => { e.stopPropagation(); onDelete(car.id); }} disabled={deleting}
-                style={{ background:"none", border:"none", fontSize:13, color:deleting?"#333":"#555", cursor:deleting?"not-allowed":"pointer", padding:"4px 8px", borderRadius:6, fontFamily:"inherit" }}>
-                {deleting ? "Removing…" : "Remove car"}
-              </button>
+
+              <div style={{ display:"flex", gap:6 }}> 
+                <button onClick={e => { e.stopPropagation(); onEdit(car); }}style={{ background:"none", border:"1px solid #252830", borderRadius:6, fontSize:12, color:"#888", cursor:"pointer", padding:"4px 10px", fontFamily:"inherit" }}>
+                Edit </button> 
+
+                <button onClick={e => { e.stopPropagation(); onDelete(car.id); }}
+                style={{ background:"none", border:"1px solid #252830", borderRadius:6, fontSize:12, color:"#888", cursor:"pointer", padding:"4px 10px", fontFamily:"inherit" }}>
+                Remove car </button>
+                
+              </div>
             </div>
             {schedule.map(svc => (
               <ServiceCard key={svc.id} svc={svc}
@@ -919,13 +1051,16 @@ function CarCard({ car, serviceLog, onDelete, scheduled, onToggle, onDate, onCom
 
 function MyCar({
   cars, allScheduled, serviceLog, garageLoaded, garageError,
-  onAddCar, onDeleteCar, onToggle, onDate, onComplete,
+  onAddCar, onDeleteCar, onEdit, onRefreshCars, onToggle, onDate, onComplete,
   onClearError, onServiceLogged, onServiceLogRemoved, user
 }) {
+  console.log("MyCar props - onEdit:", onEdit);
   const [showModal,  setShowModal]  = useState(false);
   const [tab,        setTab]        = useState("garage");
   const [saving,     setSaving]     = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false); 
+  const [editingCar, setEditingCar] = useState(null);
 
   async function addCar(formData) {
     setSaving(true);
@@ -936,6 +1071,34 @@ function MyCar({
     } catch {}
     finally { setSaving(false); }
   }
+
+  async function editCar(formData) {
+    console.log("editCar called with:", formData);
+    setSaving(true);
+    try {
+      const res = await axiosAuth.put(`${API_URL}/cars/${formData.id}`, formData);
+      console.log("Response from server:", res.data);
+        
+      // Update the car in the parent state
+      if (onEdit) {
+        onEdit(res.data);
+      }
+        
+      // Also refresh the entire list to ensure consistency
+      if (onRefreshCars) {
+        onRefreshCars();
+      }
+        
+      setShowEditModal(false);
+      setEditingCar(null);
+    } catch (err) {
+      console.error("Failed to update car:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
+  
+  
 
   async function deleteCar(id) {
     setDeletingId(id);
@@ -957,6 +1120,7 @@ function MyCar({
     onServiceLogged({ ...res.data, carId: parseInt(carId) });
     onComplete(carId, svcId);
   }
+
 
   async function undoService(carId, svcId) {
     const logForCar = serviceLog.filter(l => l.carId === parseInt(carId) && l.serviceId === svcId);
@@ -990,10 +1154,23 @@ function MyCar({
       `}</style>
 
       <div style={{ maxWidth:900, margin:"0 auto", padding:"28px 20px 80px" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820" }}>CARCARE</div>
-          <button onClick={() => setShowModal(true)} style={{ background:"#e0a820", border:"none", borderRadius:8, padding:"9px 18px", fontSize:13, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit" }}>+ Add car</button>
+        
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820" }}>Schedule Service</div>
         </div>
+
+      
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, marginTop: 20}}>
+          <div style={{ display:"flex", gap:4, background:"#16181e", borderRadius:10, padding:4, border: "1px solid #333", width:"fit-content" }}>
+          {[["garage", "My Garage"],["calendar", "Calendar"]].map(([key, label]) => (
+            <button key={key} onClick={() => setTab(key)}
+              style={{ background:tab===key?"#e0a820":"none", border:"none", borderRadius:7, padding:"7px 18px", fontSize:13, fontWeight:tab===key?700:400, color:tab===key?"#0d0f12":"#888", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6 }}>
+              <img src={TAB_ICONS[key]} alt={key} style={{ width:25, height:25 }}/>{label}
+            </button>
+          ))}</div>
+          <button onClick={() => setShowModal(true)} style={{ background:"#e0a820", border:"none", borderRadius:8, padding:"9px 18px", fontSize:13, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit", marginRight:4 }}>+ Add car</button>
+        </div>
+      
 
         {garageError && (
           <div style={{ background:"#2a1010", border:"1px solid #5a1a1a", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13, color:"#E24B4A", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1002,14 +1179,7 @@ function MyCar({
           </div>
         )}
 
-        <div style={{ display:"flex", gap:4, marginBottom:24, background:"#16181e", borderRadius:10, padding:4, width:"fit-content" }}>
-          {[["garage", "My Garage"],["calendar", "Calendar"]].map(([key, label]) => (
-            <button key={key} onClick={() => setTab(key)}
-              style={{ background:tab===key?"#e0a820":"none", border:"none", borderRadius:7, padding:"7px 18px", fontSize:13, fontWeight:tab===key?700:400, color:tab===key?"#0d0f12":"#888", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6 }}>
-              <img src={TAB_ICONS[key]} alt={key} style={{ width:25, height:25 }}/>{label}
-            </button>
-          ))}
-        </div>
+        
 
         {!garageLoaded ? (
           <div style={{ textAlign:"center", padding:"80px 20px", color:"#555", fontSize:14 }}>
@@ -1024,15 +1194,17 @@ function MyCar({
                 <div style={{ fontSize:13, color:"#555", marginBottom:20 }}>Click a car to expand its maintenance schedule</div>
                 {cars.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"80px 20px", color:"#555" }}>
-                    <div style={{ fontSize:56, opacity:.3, marginBottom:16 }}>🚗</div>
+                    <div style={{ fontSize:56, opacity:.3, marginBottom:16 }}><img src={TAB_ICONS.car} alt="car" style={{ width:64, height:64 }}/></div>
+        <div style={{ flex:1, minWidth:0 }}> </div>
                     <div style={{ fontSize:18, color:"#888", marginBottom:8, fontWeight:500 }}>No vehicles yet</div>
                     <div style={{ fontSize:13, lineHeight:1.7, marginBottom:24 }}>Add your car to get a personalised maintenance schedule<br/>with service items, costs and calendar scheduling.</div>
                     <button onClick={() => setShowModal(true)} style={{ background:"#e0a820", border:"none", borderRadius:8, padding:"10px 20px", fontSize:14, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit" }}>+ Add my first car</button>
                   </div>
                 ) : cars.map(car => (
-                  <CarCard key={car.id} car={car} serviceLog={serviceLog}
+                  <CarCard key={car.id + car.updatedAt || car.id} car={car} serviceLog={serviceLog}
                     onDelete={deleteCar}
                     deleting={deletingId === car.id}
+                    onEdit={(car) => {setEditingCar(car); setShowEditModal(true);}}
                     scheduled={allScheduled[car.id] || {}}
                     onToggle={(svcId, val) => onToggle(car.id, svcId, val)}
                     onDate={(svcId, val) => onDate(car.id, svcId, val)}
@@ -1060,7 +1232,9 @@ function MyCar({
       </div>
 
       {showModal && <AddCarModal onAdd={addCar} onClose={() => setShowModal(false)} saving={saving}/>}
+      {showEditModal && editingCar && (<EditCarModal car={editingCar} onSave={editCar} onClose={() => {setShowEditModal(false);setEditingCar(null);}} saving={saving}/>)}
     </div>
+    
   );
 }
 

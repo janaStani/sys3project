@@ -162,6 +162,17 @@ if (DB_TYPE === 'sqlite') {
         [carId, userId]
     );
 
+
+    DB.updateCar = (carId, userId, make, model, year, type, mileage, fuelType) => {
+        console.log("DB.updateCar called with:", { carId, userId, make, model, year, type, mileage, fuelType });
+        const sql = `
+            UPDATE Car 
+            SET make = ?, model = ?, year = ?, style = ?, mileage = ?, fuelType = ?
+            WHERE carId = ? AND userId = ?
+        `;
+        return query(sql, [make, model, year, type, mileage, fuelType, carId, userId]);
+    };
+
     DB.saveScheduled = (carId, userId, scheduled) => query(
         'UPDATE Car SET scheduled = ? WHERE carId = ? AND userId = ?',
         [scheduled, carId, userId]

@@ -26,6 +26,7 @@ const TAB_ICONS = {
   calendar: "/icons/calendar.png",
   service: "/icons/adjustable-spanner.png",
   cost: "/icons/gear money.png",
+  history: "/icons/manual-book.png"
 };
 
 function getCarType(car) {
@@ -218,19 +219,22 @@ export default function History({ cars = [], serviceLog = [], garageLoaded = fal
         ::-webkit-scrollbar-thumb { background:#333; border-radius:4px; }
       `}</style>
 
-      <div style={{ maxWidth:700, margin:"0 auto", padding:"28px 20px 80px" }}>
-        <div style={{ marginBottom:28 }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820", marginBottom:4 }}>SERVICE HISTORY</div>
-          <div style={{ fontSize:13, color:"#555" }}>A complete log of all completed maintenance across your vehicles</div>
+      <div style={{ maxWidth:900, margin:"0 auto", padding:"28px 20px 80px" }}>
+        
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:".08em", color:"#e0a820" }}>Service history</div>
         </div>
+          
+        <div style={{ fontSize: 14, color: "#666", marginBottom: 24}}>A complete log of all completed maintenance across your vehicles</div>
+
 
         {history.length === 0 ? (
           <div style={{ textAlign:"center", padding:"80px 20px", color:"#555" }}>
-            <div style={{ fontSize:56, opacity:.3, marginBottom:16 }}>📋</div>
+            <div style={{ opacity:.3, marginBottom:16 }}><img src={TAB_ICONS.history} style={{weight: 58, height: 58}}/></div>
             <div style={{ fontSize:18, color:"#888", marginBottom:8, fontWeight:500 }}>No history yet</div>
             <div style={{ fontSize:13, lineHeight:1.7, color:"#444" }}>
               Completed services will appear here automatically.<br/>
-              Go to <strong style={{ color:"#e0a820" }}>My Garage</strong>, schedule a service and mark it as done.
+              Go to <strong style={{ color:"#b38418" }}>My Garage</strong>, schedule a service and mark it as done.
             </div>
           </div>
         ) : (

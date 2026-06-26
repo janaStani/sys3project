@@ -48,6 +48,51 @@ cars.post('/', async (req, res) => {
     }
 });
 
+cars.put('/:id', async (req, res) => {
+    console.log("PUT /cars/:id called with:", req.params.id, req.body);
+    if (!requireLogin(req, res)) return;
+    try {
+        const { make, model, year, type, fuelType, mileage } = req.body;
+        const carId = req.params.id;
+        const userId = req.session.user.id;
+
+        console.log("Updating car:", carId, "for user:", userId);
+        console.log("Data:", { make, model, year, type, fuelType, mileage });
+
+        if (!make || !model || !year || !type || !fuelType || mileage === undefined) {
+            return res.status(400).json({ status: { success: false, msg: 'All fields required' } });
+        }
+
+        // Check if the car belongs to the user
+        const cars = await DB.getUserCars(userId);
+        console.log("User cars:", cars);
+        const carExists = Array.isArray(cars) && cars.some(c => c.id == carId);
+        
+        if (!carExists) {
+            console.log("Car not found for user");
+            return res.status(404).json({ status: { success: false, msg: 'Car not found' } });
+        }
+
+        console.log("Calling DB.updateCar...");
+        await DB.updateCar(carId, userId, make, model, year, type, mileage, fuelType);
+        console.log("DB.updateCar completed");
+
+        return res.status(200).json({
+            id: parseInt(carId),
+            userId: userId,
+            make,
+            model,
+            year,
+            style: type,
+            fuelType,
+            mileage,
+        });
+    } catch (err) {
+        console.error('PUT /cars/:id error:', err);
+        return res.status(500).json({ status: { success: false, msg: 'Server error: ' + err.message } });
+    }
+});
+
 cars.delete('/:id', async (req, res) => {
     if (!requireLogin(req, res)) return;
     try {
@@ -84,6 +129,7 @@ cars.post('/:id/complete-service', async (req, res) => {
         return res.status(500).json({ status: { success: false, msg: 'Server error' } });
     }
 });
+
 
 cars.get('/service-log', async (req, res) => {
     if (!requireLogin(req, res)) return;
