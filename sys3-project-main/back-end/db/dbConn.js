@@ -61,6 +61,9 @@ if (DB_TYPE === 'sqlite') {
             date TEXT NOT NULL,           -- ISO date string
             costMin INTEGER,
             costMax INTEGER,
+            mechanicName TEXT,
+            pricePaid INTEGER,
+            mechanicId INTEGER,
             notes TEXT,
             createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(carId) REFERENCES Car(carId) ON DELETE CASCADE
@@ -81,6 +84,22 @@ if (DB_TYPE === 'sqlite') {
     `);
 
     // migrations
+
+    const slCols = sqlite.prepare('PRAGMA table_info(ServiceLog)').all().map(c => c.name);
+    if (!slCols.includes('mechanicName')) {
+        sqlite.exec('ALTER TABLE ServiceLog ADD COLUMN mechanicName TEXT');
+        console.log('Added mechanicName column to ServiceLog');
+    }
+    if (!slCols.includes('pricePaid')) {
+        sqlite.exec('ALTER TABLE ServiceLog ADD COLUMN pricePaid INTEGER');
+        console.log('Added pricePaid column to ServiceLog');
+    }
+    if (!slCols.includes('notes')) {
+        // Notes already exists, but if it doesn't:
+        // sqlite.exec('ALTER TABLE ServiceLog ADD COLUMN notes TEXT');
+        console.log('notes column already exists');
+    }
+
     const spCols = sqlite.prepare('PRAGMA table_info(ServiceProvider)').all().map(c => c.name);
     if (!spCols.includes('userAdded')) {
         sqlite.exec('ALTER TABLE ServiceProvider ADD COLUMN userAdded INTEGER NOT NULL DEFAULT 0');
@@ -88,6 +107,10 @@ if (DB_TYPE === 'sqlite') {
     const rvCols = sqlite.prepare('PRAGMA table_info(Review)').all().map(c => c.name);
     if (!rvCols.includes('providerId')) {
         sqlite.exec('ALTER TABLE Review ADD COLUMN providerId INTEGER REFERENCES ServiceProvider(providerId) ON DELETE SET NULL');
+    }
+    if (!slCols.includes('mechanicId')) {
+        sqlite.exec('ALTER TABLE ServiceLog ADD COLUMN mechanicId INTEGER');
+        console.log('Added mechanicId column to ServiceLog');
     }
 
     const insertProvider = sqlite.prepare(
@@ -202,11 +225,21 @@ DB.getProviderByName = (name) => query(
     [name]
 );
 
-    DB.addServiceLog = (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax) => query(
-        `INSERT INTO ServiceLog (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax]
-    );
+    DB.addServiceLog = (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax, mechanicName, pricePaid, notes, mechanicId) => {
+        const sql = `
+            INSERT INTO ServiceLog 
+            (carId, userId, serviceId, serviceName, category, mileageAt, date, costMin, costMax, mechanicName, pricePaid, notes, mechanicId)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        return query(sql, [
+            carId, userId, serviceId, serviceName, category, mileageAt, date, 
+            costMin, costMax, 
+            mechanicName || '',      // Default to empty string if null
+            pricePaid || null,        // Keep as null if not provided
+            notes || '',              // Default to empty string if null
+            mechanicId || null        // Add mechanicId
+        ]);
+    };
 
     DB.getCarServiceLog = (carId, userId) => query(
         'SELECT * FROM ServiceLog WHERE carId = ? AND userId = ? ORDER BY date DESC, logId DESC',

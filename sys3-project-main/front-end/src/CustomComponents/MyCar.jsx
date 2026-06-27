@@ -425,6 +425,292 @@ function EditCarModal({ car, onSave, onClose, saving }) {
   );
 }
 
+// ── COMPLETE SERVICE MODAL ─────────────────────────────────────────────────────────────
+function CompleteServiceModal({ car, service, onConfirm, onClose, saving, mechanics = [], userCoords }) {
+  const [mechanicName, setMechanicName] = useState("");
+  const [price, setPrice] = useState("");
+  const [notes, setNotes] = useState("");
+  const [err, setErr] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Sort mechanics by distance if coords available
+  const sortedMechanics = useMemo(() => {
+    if (!mechanics.length) return [];
+
+    if (userCoords) {
+      return [...mechanics].sort((a, b) => {
+        const distA = a.distance || Infinity;
+        const distB = b.distance || Infinity;
+        return distA - distB;
+      });
+    }
+    return mechanics;
+  }, [mechanics, userCoords]);
+
+  // Suggestions filtered by what's typed (show all when the box is empty).
+  const filteredMechanics = useMemo(() => {
+    const typed = mechanicName.trim().toLowerCase();
+    if (!typed) return sortedMechanics;
+    return sortedMechanics.filter(m =>
+      (m.provider || m.name || "").toLowerCase().includes(typed)
+    );
+  }, [mechanicName, sortedMechanics]);
+
+  // If the typed name exactly matches a suggested mechanic, reuse its providerId.
+  // Otherwise mechanicId stays null and the backend resolves/creates by name.
+  const matchedMechanic = useMemo(() => {
+    const typed = mechanicName.trim().toLowerCase();
+    if (!typed) return null;
+    return sortedMechanics.find(
+      m => (m.provider || m.name || "").trim().toLowerCase() === typed
+    ) || null;
+  }, [mechanicName, sortedMechanics]);
+
+  const pickMechanic = (m) => {
+    setMechanicName(m.provider || m.name || "");
+    setDropdownOpen(false);
+  };
+
+  const handleConfirm = () => {
+    if (!mechanicName.trim()) {
+      setErr("Please select or enter a mechanic name.");
+      return;
+    }
+    if (!price || isNaN(price) || parseFloat(price) <= 0) {
+      setErr("Please enter a valid price.");
+      return;
+    }
+
+    onConfirm({
+      mechanicName: mechanicName.trim(),
+      mechanicId: matchedMechanic ? (matchedMechanic.id || matchedMechanic.providerId || null) : null,
+      price: parseFloat(price),
+      notes: notes.trim(),
+    });
+  };
+
+  return (
+    <div 
+      onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ 
+        position: "fixed", 
+        inset: 0, 
+        background: "rgba(0,0,0,.85)", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        padding: 20, 
+        zIndex: 500 
+      }}
+    >
+      <div style={{ 
+        background: "#1a1c22", 
+        border: "1px solid #333", 
+        borderRadius: 16, 
+        width: "100%", 
+        maxWidth: 480,
+        maxHeight: "90vh",
+        overflow: "auto"
+      }}>
+        <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>Complete Service</div>
+            <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>
+              {car.make} {car.model} {car.year} · {service.name}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#888", fontSize: 24, cursor: "pointer" }}>×</button>
+        </div>
+
+        <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Service details */}
+          <div style={{ 
+            background: "#0d0f12", 
+            border: "1px solid #252830", 
+            borderRadius: 10, 
+            padding: 14 
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <img src={service.icon} alt={service.name} style={{ width: 24, height: 24, objectFit: "contain" }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{service.name}</div>
+                <div style={{ fontSize: 12, color: "#555" }}>Estimated cost: €{service.costMin}–€{service.costMax}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: "#666" }}>
+              <div>Current mileage: {parseInt(car.mileage).toLocaleString()} km</div>
+            </div>
+          </div>
+
+          {/* Mechanic — type freely or pick a nearby suggestion */}
+          <Field label="Mechanic / Garage">
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                value={mechanicName}
+                onChange={e => { setMechanicName(e.target.value); setDropdownOpen(true); }}
+                onFocus={() => setDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+                placeholder="Type a name or pick a nearby mechanic…"
+                style={INPUT_STYLE}
+                autoComplete="off"
+              />
+              {dropdownOpen && filteredMechanics.length > 0 && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  background: "#1a1c22",
+                  border: "1px solid #333",
+                  borderRadius: 10,
+                  maxHeight: 220,
+                  overflowY: "auto",
+                  zIndex: 10,
+                  boxShadow: "0 8px 24px rgba(0,0,0,.5)"
+                }}>
+                  {filteredMechanics.map(m => {
+                    const name = m.provider || m.name || "";
+                    const dist = m.distance != null ? `${m.distance.toFixed(1)} km` : "";
+                    const rating = m.avgRating || m.rating || 0;
+                    const stars = rating > 0 ? `★ ${Number(rating).toFixed(1)}` : "";
+                    return (
+                      <div
+                        key={m.id || m.providerId}
+                        onMouseDown={() => pickMechanic(m)}
+                        style={{
+                          padding: "10px 14px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          borderBottom: "1px solid #252830"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#23262e"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span style={{ fontSize: 14, color: "#f0f0f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {name}
+                        </span>
+                        <span style={{ display: "flex", gap: 10, flexShrink: 0, fontSize: 12 }}>
+                          {stars && <span style={{ color: "#e0a820" }}>{stars}</span>}
+                          {dist && <span style={{ color: "#e0a820", fontWeight: 600 }}>{dist}</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Field>
+
+          {/* Feedback: matched a known mechanic vs a new one */}
+          {mechanicName.trim() && (
+            matchedMechanic ? (
+              <div style={{
+                fontSize: 13,
+                color: "#639922",
+                background: "#0e1e0a",
+                border: "1px solid #1a4a0a",
+                borderRadius: 8,
+                padding: "8px 12px"
+              }}>
+                ✓ Using nearby mechanic: {matchedMechanic.provider || matchedMechanic.name}
+              </div>
+            ) : (
+              <div style={{
+                fontSize: 13,
+                color: "#888",
+                background: "#0d0f12",
+                border: "1px solid #252830",
+                borderRadius: 8,
+                padding: "8px 12px"
+              }}>
+                New mechanic — will be saved as “{mechanicName.trim()}”
+              </div>
+            )
+          )}
+
+          {/* Price input */}
+          <Field label="Price paid (€)">
+            <input 
+              type="number" 
+              value={price} 
+              onChange={e => setPrice(e.target.value)}
+              placeholder="e.g. 150"
+              min="0"
+              step="1"
+              style={INPUT_STYLE}
+            />
+          </Field>
+
+          {/* Notes input */}
+          <Field label="Notes (optional)">
+            <textarea 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Any additional details about the service..."
+              rows={3}
+              style={{ ...INPUT_STYLE, resize: "vertical", fontFamily: "inherit" }}
+            />
+          </Field>
+
+          {err && (
+            <div style={{ 
+              fontSize: 12, 
+              color: "#E24B4A", 
+              padding: "8px 12px", 
+              background: "#2a1010", 
+              border: "1px solid #5a1a1a", 
+              borderRadius: 8 
+            }}>
+              {err}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <button 
+              onClick={onClose} 
+              style={{ 
+                flex: 1,
+                background: "none", 
+                border: "1px solid #333", 
+                borderRadius: 10, 
+                padding: 12, 
+                fontSize: 14, 
+                color: "#888", 
+                cursor: "pointer", 
+                fontFamily: "inherit" 
+              }}
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleConfirm} 
+              disabled={saving}
+              style={{ 
+                flex: 2,
+                background: "#e0a820", 
+                border: "none", 
+                borderRadius: 10, 
+                padding: 12, 
+                fontSize: 14, 
+                fontWeight: 700, 
+                color: "#0d0f12", 
+                cursor: saving ? "not-allowed" : "pointer",
+                opacity: saving ? 0.7 : 1
+              }}
+            >
+              {saving ? "Saving..." : "✓ Confirm & Complete"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DayEventsPicker({ events, onSelect, onClose }) {
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:400, padding:20 }}
@@ -799,7 +1085,7 @@ function CalendarView({ cars, allScheduled, serviceLog, user }) {
   );
 }
 
-function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete }) {
+function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete, onMarkAsDone, onScheduleNext }) {
   const sm        = STATUS_STYLES[svc.status];
   const confirmed = scheduled?.confirmed || false;
   const completed = scheduled?.completed || false;
@@ -878,7 +1164,7 @@ function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete }) {
           </div>
           <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid #252830", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <span style={{ fontSize:11, color:"#555" }}>Service performed?</span>
-            <button onClick={() => onComplete(svc.id)}
+            <button onClick={() => onMarkAsDone(svc.id)}
               style={{ background:"#0e1e0a", border:"1px solid #1a4a0a", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, color:"#639922", cursor:"pointer", fontFamily:"inherit" }}
               onMouseEnter={e => { e.currentTarget.style.background="#1a3a0a"; e.currentTarget.style.borderColor="#2a6a0a"; }}
               onMouseLeave={e => { e.currentTarget.style.background="#0e1e0a"; e.currentTarget.style.borderColor="#1a4a0a"; }}>
@@ -896,7 +1182,7 @@ function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete }) {
               style={{ background:"none", border:"1px solid #252830", borderRadius:6, padding:"5px 10px", fontSize:11, color:"#555", cursor:"pointer", fontFamily:"inherit" }}>
               Undo
             </button>
-            <button onClick={() => onToggle(svc.id, false)}
+            <button onClick={() => onScheduleNext(svc.id)}
               style={{ background:"#e0a820", border:"none", borderRadius:6, padding:"5px 12px", fontSize:11, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit" }}>
               Schedule next →
             </button>
@@ -907,7 +1193,7 @@ function ServiceCard({ svc, scheduled, onToggle, onDate, onComplete }) {
   );
 }
 
-function CarCard({ car, serviceLog, onDelete, onEdit, scheduled, onToggle, onDate, onComplete, deleting }) {
+function CarCard({ car, serviceLog, onDelete, onEdit, scheduled, onToggle, onDate, onComplete, onMarkAsDone, onScheduleNext, deleting }) {
   const [open, setOpen] = useState(false);
   const schedule = useMemo(() => generateSchedule(car, serviceLog), [car, serviceLog]);
   const statusCounts = useMemo(() => ({
@@ -1032,6 +1318,8 @@ function CarCard({ car, serviceLog, onDelete, onEdit, scheduled, onToggle, onDat
                 onToggle={onToggle}
                 onDate={onDate}
                 onComplete={onComplete}
+                onMarkAsDone={(svcId) => onMarkAsDone(svcId)}
+                onScheduleNext={(svcId) => onScheduleNext(svcId)}
               />
             ))}
           </div>
@@ -1052,7 +1340,7 @@ function CarCard({ car, serviceLog, onDelete, onEdit, scheduled, onToggle, onDat
 function MyCar({
   cars, allScheduled, serviceLog, garageLoaded, garageError,
   onAddCar, onDeleteCar, onEdit, onRefreshCars, onToggle, onDate, onComplete,
-  onClearError, onServiceLogged, onServiceLogRemoved, user
+  onClearError, onServiceLogged, onServiceLogRemoved, onScheduleNext, user
 }) {
   console.log("MyCar props - onEdit:", onEdit);
   const [showModal,  setShowModal]  = useState(false);
@@ -1061,6 +1349,11 @@ function MyCar({
   const [deletingId, setDeletingId] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false); 
   const [editingCar, setEditingCar] = useState(null);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completingService, setCompletingService] = useState(null);
+  const [savingComplete, setSavingComplete] = useState(false);
+  const [nearbyMechanics, setNearbyMechanics] = useState([]);
+  const [userCoords, setUserCoords] = useState(null);
 
   async function addCar(formData) {
     setSaving(true);
@@ -1109,26 +1402,93 @@ function MyCar({
     finally { setDeletingId(null); }
   }
 
-  async function completeService(carId, svcId) {
+  async function completeService(carId, svcId, details) {
     const car = cars.find(c => c.id === carId);
     const svc = generateSchedule(car, serviceLog).find(s => s.id === svcId);
-    const res = await axiosAuth.post(`${API_URL}/cars/${carId}/complete-service`, {
-      serviceId: svc.id, serviceName: svc.name, category: svc.category,
-      mileageAt: car.mileage, date: new Date().toISOString().slice(0,10),
-      costMin: svc.costMin, costMax: svc.costMax,
-    });
-    onServiceLogged({ ...res.data, carId: parseInt(carId) });
-    onComplete(carId, svcId);
+
+    // Use the date the user scheduled for this service; fall back to today if none set.
+    const scheduledDate = (allScheduled[carId] || {})[svcId]?.date;
+    const serviceDate = scheduledDate || new Date().toISOString().slice(0, 10);
+
+    setSavingComplete(true);
+    try {
+      // If it's a new mechanic, save it to the database first
+      let mechanicId = details.mechanicId;
+      
+      if (!mechanicId && details.mechanicName) {
+        // Check if mechanic already exists
+        const existing = nearbyMechanics.find(
+          m => (m.provider || m.name || "").toLowerCase() === details.mechanicName.toLowerCase()
+        );
+        if (existing) {
+          mechanicId = existing.id || existing.providerId;
+        } else {
+          // Create new mechanic
+          try {
+            const newMechanic = await axiosAuth.post(`${API_URL}/providers`, {
+              name: details.mechanicName,
+              location: "",
+              phone: ""
+            });
+            mechanicId = newMechanic.data?.id || newMechanic.data?.providerId;
+          } catch (err) {
+            console.error("Failed to create new mechanic:", err);
+          }
+        }
+      }
+
+      const res = await axiosAuth.post(`${API_URL}/cars/${carId}/complete-service`, {
+        serviceId: svc.id,
+        serviceName: svc.name,
+        category: svc.category,
+        mileageAt: car.mileage,
+        date: serviceDate,
+        costMin: svc.costMin,
+        costMax: svc.costMax,
+        mechanicName: details.mechanicName || '',
+        mechanicId: mechanicId,
+        pricePaid: details.price || null,
+        notes: details.notes || '',
+      });
+      onServiceLogged({ ...res.data, carId: parseInt(carId) });
+      onComplete(carId, svcId);
+      setShowCompleteModal(false);
+      setCompletingService(null);
+    } catch (err) {
+      console.error("Failed to complete service:", err);
+    } finally {
+      setSavingComplete(false);
+    }
   }
+
+const fetchMechanics = async () => {
+  try {
+    const response = await axiosAuth.get(`${API_URL}/providers`);
+    const mechanics = response.data?.providers || [];
+    setNearbyMechanics(mechanics);
+  } catch (err) {
+    console.error("Failed to fetch mechanics:", err);
+    setNearbyMechanics([]);
+  }
+};
+
+function handleMarkAsDone(carId, svcId) {
+    const car = cars.find(c => c.id === carId);
+    const svc = generateSchedule(car, serviceLog).find(s => s.id === svcId);
+    setCompletingService({ carId, svcId, car, svc });
+    fetchMechanics();
+    setShowCompleteModal(true);
+}
 
 
   async function undoService(carId, svcId) {
     const logForCar = serviceLog.filter(l => l.carId === parseInt(carId) && l.serviceId === svcId);
     const mostRecent = logForCar.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    if (!mostRecent?.id) { onComplete(carId, svcId, true); return; }
+    const logId = mostRecent?.logId ?? mostRecent?.id;   // rows use logId; fall back to id
+    if (!logId) { onComplete(carId, svcId, true); return; }
     try {
-      await axiosAuth.delete(`${API_URL}/cars/${carId}/service-log/${mostRecent.id}`, { withCredentials: true });
-      onServiceLogRemoved(mostRecent.id);
+      await axiosAuth.delete(`${API_URL}/cars/${carId}/service-log/${logId}`, { withCredentials: true });
+      onServiceLogRemoved(logId);
     } catch (err) {
       console.error("Failed to delete service log", err);
     }
@@ -1205,6 +1565,7 @@ function MyCar({
                     onDelete={deleteCar}
                     deleting={deletingId === car.id}
                     onEdit={(car) => {setEditingCar(car); setShowEditModal(true);}}
+                    onMarkAsDone={(svcId) => handleMarkAsDone(car.id, svcId)}
                     scheduled={allScheduled[car.id] || {}}
                     onToggle={(svcId, val) => onToggle(car.id, svcId, val)}
                     onDate={(svcId, val) => onDate(car.id, svcId, val)}
@@ -1212,6 +1573,7 @@ function MyCar({
                       if (undo) undoService(car.id, svcId);
                       else      completeService(car.id, svcId);
                     }}
+                    onScheduleNext={(svcId) => onScheduleNext(car.id, svcId)}
                   />
                 ))}
               </>
@@ -1233,6 +1595,8 @@ function MyCar({
 
       {showModal && <AddCarModal onAdd={addCar} onClose={() => setShowModal(false)} saving={saving}/>}
       {showEditModal && editingCar && (<EditCarModal car={editingCar} onSave={editCar} onClose={() => {setShowEditModal(false);setEditingCar(null);}} saving={saving}/>)}
+      {showCompleteModal && completingService && (<CompleteServiceModal car={completingService.car} service={completingService.svc} onConfirm={(details) => {completeService(completingService.carId, completingService.svcId, details);}}
+        onClose={() => {setShowCompleteModal(false);setCompletingService(null);}} saving={savingComplete} mechanics={nearbyMechanics} userCoords={userCoords}/>)}
     </div>
     
   );

@@ -38,6 +38,11 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // Session must be set up before the JWT middleware below
 app.use(session({
     secret: process.env.SESSION_SECRET || 'fallback-secret-change-this',

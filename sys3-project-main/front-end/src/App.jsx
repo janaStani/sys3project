@@ -159,9 +159,21 @@ class App extends Component {
     });
   };
 
+  handleScheduleNext = (carId, svcId) => {
+    // Reset this service's scheduled state so the card returns to fresh/unscheduled.
+    // The completed service is already in the service log (history), so it stays there.
+    // generateSchedule then recalculates the next due date from the latest log entry.
+    this.setState(prev => {
+      const carSched = { ...(prev.allScheduled[carId] || {}) };
+      delete carSched[svcId];                          // remove completed/confirmed/date flags
+      this.saveScheduled(carId, carSched);             // persist the cleared entry to backend
+      return { allScheduled: { ...prev.allScheduled, [carId]: carSched } };
+    });
+  };
+
   handleServiceLogRemoved = (logId) => {
     this.setState(prev => ({
-      serviceLog: prev.serviceLog.filter(l => l.id !== logId),
+      serviceLog: prev.serviceLog.filter(l => (l.logId ?? l.id) !== logId),
     }));
   };
 
@@ -178,6 +190,42 @@ class App extends Component {
 
   setLoggedIn = (user) => {
     this.setState({ user, currentPage:"MY_CAR" }, () => this.loadGarage());
+  };
+
+  handleDeleteHistory = async (logId) => {
+    
+    console.log("delete logId:", logId, typeof logId);
+    console.log("serviceLog ids:", this.state.serviceLog.map(l => [l.logId, typeof l.logId]));
+    
+    const entry = this.state.serviceLog.find(l => Number(l.logId ?? l.id) === Number(logId));
+    console.log("matched entry:", entry);
+    if (!entry) return;
+
+    try {
+      await axiosAuth.delete(`${API_URL}/cars/${entry.carId}/service-log/${logId}`, { withCredentials: true });
+    } catch (err) {
+      console.error("Failed to delete history record:", err);
+      return; // don't update UI if the server delete failed
+    }
+
+    // Compute the cleared schedule outside of setState
+    const carSched = { ...(this.state.allScheduled[entry.carId] || {}) };
+    let schedChanged = false;
+    if (carSched[entry.serviceId]) {
+      delete carSched[entry.serviceId];
+      schedChanged = true;
+    }
+
+    // Pure state update — no side effects inside
+    this.setState(prev => ({
+      serviceLog: prev.serviceLog.filter(l => Number(l.logId ?? l.id) !== Number(logId)),
+      allScheduled: { ...prev.allScheduled, [entry.carId]: carSched },
+    }));
+
+    // Side effect AFTER, outside the updater
+    if (schedChanged) {
+      this.saveScheduled(entry.carId, carSched);
+    }
   };
 
   setPage = (currentPage) => this.setState({ currentPage });
@@ -216,6 +264,7 @@ class App extends Component {
           onClearError={() => this.setState({ garageError:"" })}
           onServiceLogged={this.handleServiceLogged}
           onServiceLogRemoved={this.handleServiceLogRemoved}
+          onScheduleNext={this.handleScheduleNext}
           saveScheduled={this.saveScheduled}
           user={user}
         />
@@ -228,6 +277,7 @@ class App extends Component {
           cars={cars}
           serviceLog={this.state.serviceLog}
           garageLoaded={garageLoaded}
+          onDelete={this.handleDeleteHistory}
         />
       );
     }

@@ -26,7 +26,9 @@ const TAB_ICONS = {
   calendar: "/icons/calendar.png",
   service: "/icons/adjustable-spanner.png",
   cost: "/icons/gear money.png",
-  history: "/icons/manual-book.png"
+  history: "/icons/manual-book.png",
+  mechanic: "/icons/repair-tools.png",
+  notes: "/icons/manual-book.png",
 };
 
 function getCarType(car) {
@@ -71,9 +73,12 @@ function StatCard({ icon, value, label, accent }) {
   );
 }
 
-function HistoryEntry({ entry, isLast }) {
+function HistoryEntry({ entry, isLast, onDelete }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const carIcon = CAR_ICONS[getCarType(entry.car)] || "/icons/unknown-car.png";
+
+  const hasPricePaid = entry.pricePaid != null && entry.pricePaid !== "" && !isNaN(entry.pricePaid);
 
   return (
     <div style={{ display:"flex", gap:16, position:"relative" }}>
@@ -100,14 +105,27 @@ function HistoryEntry({ entry, isLast }) {
             </div>
           </div>
           <div style={{ textAlign:"right", flexShrink:0 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:"#e0a820" }}>€{entry.svc.costMin}–{entry.svc.costMax}</div>
+            {hasPricePaid ? (
+              <>
+                <div style={{ fontSize:13, fontWeight:700, color:"#639922" }}>€{Number(entry.pricePaid).toLocaleString()}</div>
+                <div style={{ fontSize:10, color:"#555", marginTop:1 }}>paid</div>
+              </>
+            ) : (
+              <div style={{ fontSize:13, fontWeight:700, color:"#e0a820" }}>€{entry.svc.costMin}–{entry.svc.costMax}</div>
+            )}
             <div style={{ fontSize:11, color:"#555", marginTop:2 }}>{formatDate(entry.date)}</div>
           </div>
           <div style={{ fontSize:16, color:"#555", flexShrink:0, alignSelf:"center", transition:"transform .2s", transform:expanded?"rotate(180deg)":"none" }}>▾</div>
         </div>
 
-        <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, flexWrap:"wrap" }}>
           <span style={{ fontSize:11, fontWeight:700, color:"#639922", background:"#0e1e0a", border:"1px solid #1a4a0a", borderRadius:20, padding:"2px 10px" }}>✓ Completed</span>
+          {entry.mechanicName && (
+            <span style={{ fontSize:11, color:"#888", background:"#1e2028", border:"1px solid #252830", borderRadius:20, padding:"2px 10px", display:"flex", alignItems:"center", gap:5 }}>
+              <img src={TAB_ICONS.mechanic} alt="" style={{ width:12, height:12, opacity:.7 }} />
+              {entry.mechanicName}
+            </span>
+          )}
         </div>
 
         {expanded && (
@@ -118,14 +136,64 @@ function HistoryEntry({ entry, isLast }) {
                 <img src={TAB_ICONS.calendar}alt="date" style={{ width:16, height:16, flexShrink:0, opacity:0.7 }}/>
                 <span>Performed on {formatDate(entry.date)}</span>
               </div>
+              {entry.mileageAt != null && (
+                <div style={{ display:"flex", gap:8, fontSize:12, color:"#888" }}>
+                  <img src={TAB_ICONS.car} alt="mileage" style={{ width:16, height:16, flexShrink:0, opacity:0.7 }}/>
+                  <span>At {Number(entry.mileageAt).toLocaleString()} km</span>
+                </div>
+              )}
+              {entry.mechanicName && (
+                <div style={{ display:"flex", gap:8, fontSize:12, color:"#888" }}>
+                  <img src={TAB_ICONS.mechanic} alt="mechanic" style={{ width:16, height:16, flexShrink:0, opacity:0.7 }}/>
+                  <span>Serviced by {entry.mechanicName}</span>
+                </div>
+              )}
               <div style={{ display:"flex", gap:8, fontSize:12, color:"#888" }}>
                 <img src={TAB_ICONS.service} alt="service" style={{ width:16, height:16, flexShrink:0, opacity:0.7 }}/>
                 <span>Service interval: every {entry.svc.kmInterval.toLocaleString()} km</span>
               </div>
               <div style={{ display:"flex", gap:8, fontSize:12, color:"#888" }}>
                 <img src={TAB_ICONS.cost}alt="cost" style={{ width:16, height:16, flexShrink:0, opacity:0.7 }}/>
-                <span>Estimated cost: €{entry.svc.costMin}–€{entry.svc.costMax}</span>
+                <span>
+                  {hasPricePaid
+                    ? `You paid €${Number(entry.pricePaid).toLocaleString()} (est. €${entry.svc.costMin}–€${entry.svc.costMax})`
+                    : `Estimated cost: €${entry.svc.costMin}–€${entry.svc.costMax}`}
+                </span>
               </div>
+              {entry.notes && (
+                <div style={{ display:"flex", gap:8, fontSize:12, color:"#888", marginTop:3 }}>
+                  <img src={TAB_ICONS.notes} alt="notes" style={{ width:16, height:16, flexShrink:0, opacity:0.7 }}/>
+                  <span style={{ fontStyle:"italic", lineHeight:1.6 }}>{entry.notes}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Delete this history record */}
+            <div style={{ marginTop:14, display:"flex", justifyContent:"flex-end" }}>
+              {confirming ? (
+                <div style={{ display:"flex", alignItems:"center", gap:8 }} onClick={e => e.stopPropagation()}>
+                  <span style={{ fontSize:12, color:"#888" }}>Delete this record?</span>
+                  <button
+                    onClick={() => { console.log("deleting entry:", entry); setConfirming(false); onDelete(entry.logId); }}
+                    style={{ background:"#2a1010", border:"1px solid #5a1a1a", borderRadius:6, padding:"5px 12px", fontSize:11, fontWeight:700, color:"#E24B4A", cursor:"pointer", fontFamily:"inherit" }}
+                  >
+                    Yes, delete
+                  </button>
+                  <button
+                    onClick={() => setConfirming(false)}
+                    style={{ background:"none", border:"1px solid #252830", borderRadius:6, padding:"5px 12px", fontSize:11, color:"#888", cursor:"pointer", fontFamily:"inherit" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={e => { e.stopPropagation(); setConfirming(true); }}
+                  style={{ background:"none", border:"1px solid #5a1a1a", borderRadius:6, padding:"5px 12px", fontSize:11, color:"#E24B4A", cursor:"pointer", fontFamily:"inherit" }}
+                >
+                  Delete record
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -140,7 +208,7 @@ const SELECT_STYLE = {
   fontFamily:"inherit", outline:"none", cursor:"pointer",
 };
 
-export default function History({ cars = [], serviceLog = [], garageLoaded = false }) {
+export default function History({ cars = [], serviceLog = [], garageLoaded = false, onDelete = () => {} }) {
   const [filterCar, setFilterCar] = useState("all");
   const [filterCat, setFilterCat] = useState("all");
   const [sortDesc,  setSortDesc]  = useState(true);
@@ -155,7 +223,7 @@ export default function History({ cars = [], serviceLog = [], garageLoaded = fal
         getSvcMeta(entry.serviceId, isElectric);
 
       return {
-        logId: entry.logId,
+        logId: entry.logId ?? entry.id,
         car,
         svc: {
           id: entry.serviceId,
@@ -171,6 +239,9 @@ export default function History({ cars = [], serviceLog = [], garageLoaded = fal
 
         date: entry.date,
         mileageAt: entry.mileageAt,
+        mechanicName: entry.mechanicName,
+        pricePaid: entry.pricePaid,
+        notes: entry.notes,
       };
     }).filter(Boolean);
   }, [cars, serviceLog]);
@@ -190,7 +261,12 @@ export default function History({ cars = [], serviceLog = [], garageLoaded = fal
     });
   }, [history, filterCar, filterCat, sortDesc]);
 
-  const totalSpendMin = history.reduce((s, e) => s + e.svc.costMin, 0);
+  // Prefer actual price paid where available, otherwise fall back to the low estimate.
+  const totalSpent = history.reduce((s, e) => {
+    const paid = (e.pricePaid != null && e.pricePaid !== "" && !isNaN(e.pricePaid)) ? Number(e.pricePaid) : null;
+    return s + (paid != null ? paid : (e.svc.costMin || 0));
+  }, 0);
+  const hasAnyActualPrice = history.some(e => e.pricePaid != null && e.pricePaid !== "" && !isNaN(e.pricePaid));
   const uniqueCars    = new Set(history.map(e => e.car.id)).size;
 
   const carsWithHistory = cars.filter(c =>
@@ -242,7 +318,7 @@ export default function History({ cars = [], serviceLog = [], garageLoaded = fal
             <div style={{ display:"flex", gap:10, marginBottom:24, flexWrap:"wrap" }}>
               <StatCard icon={TAB_ICONS.done} value={history.length} label="Services done"/>
               <StatCard icon={TAB_ICONS.car} value={uniqueCars} label="Vehicles"/>
-              <StatCard icon={TAB_ICONS.money} value={`€${totalSpendMin.toLocaleString()}+`} label="Est. spent" />
+              <StatCard icon={TAB_ICONS.money} value={`€${totalSpent.toLocaleString()}${hasAnyActualPrice ? "" : "+"}`} label={hasAnyActualPrice ? "Total spent" : "Est. spent"} />
             </div>
 
             <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
@@ -287,9 +363,10 @@ export default function History({ cars = [], serviceLog = [], garageLoaded = fal
                   </div>
                   {group.entries.map((entry, i) => (
                     <HistoryEntry
-                      key={`${entry.car.id}-${entry.svc.id}-${entry.date}`}
+                      key={`${entry.car.id}-${entry.svc.id}-${entry.date}-${entry.logId}`}
                       entry={entry}
                       isLast={i === group.entries.length - 1}
+                      onDelete={onDelete}
                     />
                   ))}
                 </div>
