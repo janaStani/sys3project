@@ -29,6 +29,7 @@ class App extends Component {
     currentPage:    "MY_CAR",
     user:           null,
     sessionChecked: false,
+    selectedProvider: null,
     cars:           [],
     allScheduled:   {},
     serviceLog:     [],
@@ -192,6 +193,7 @@ class App extends Component {
     this.setState({ user, currentPage:"MY_CAR" }, () => this.loadGarage());
   };
 
+
   handleDeleteHistory = async (logId) => {
     
     console.log("delete logId:", logId, typeof logId);
@@ -266,6 +268,9 @@ class App extends Component {
           onServiceLogRemoved={this.handleServiceLogRemoved}
           onScheduleNext={this.handleScheduleNext}
           saveScheduled={this.saveScheduled}
+          onNavigate={(page, provider) => {
+            this.setState({ selectedProvider: provider, currentPage: page });
+          }}
           user={user}
         />
       );
@@ -283,7 +288,7 @@ class App extends Component {
     }
 
     if (currentPage === "CAR")      return <Car/>;
-    if (currentPage === "MECHANIC") return <Mechanic user={this.state.user} />;
+    if (currentPage === "MECHANIC") return <Mechanic user={this.state.user} selectedProvider={this.state.selectedProvider}/>;
     if (currentPage === "SIGNUP")   return <SignupView QUserFromChild={this.setLoggedIn}/>;
     if (currentPage === "LOGIN")    return <LoginView  QUserFromChild={this.setLoggedIn}/>;
 

@@ -746,7 +746,7 @@ function DayEventsPicker({ events, onSelect, onClose }) {
 }
 
 // ── PROVIDER CARD ─────────────────────────────────────────────────────────────
-function ProviderCard({ provider: p}) {
+function ProviderCard({ provider: p }) {
   const rating   = parseFloat(p.avgRating || p.rating) || 0;
   const stars    = Math.round(rating);
   const reviewed = p.reviewCount > 0;
@@ -758,7 +758,7 @@ function ProviderCard({ provider: p}) {
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
             <div style={{ fontSize:15, fontWeight:600 }}>{p.provider || p.name || "Service Provider"}</div>
-            {p.userAdded && (
+            {p.source === "user" && (
               <span style={{ fontSize:10, color:"#555", background:"#16181e", border:"1px solid #252830", borderRadius:12, padding:"1px 7px" }}>User added</span>
             )}
           </div>
@@ -793,7 +793,7 @@ function ProviderCard({ provider: p}) {
         style={{ display:"inline-block", background:"#e0a820", borderRadius:8, padding:"8px 16px", fontSize:12, fontWeight:700, color:"#0d0f12", textDecoration:"none" }}>
         View on Maps →
       </a>
-      <button style={{ display:"inline-block", marginLeft:12, background:"#e0a820", border:"none", borderRadius:8, padding:"8px 16px", fontSize:12, fontWeight:700, color:"#0d0f12", cursor:"pointer", fontFamily:"inherit" }}>See Reviews</button>
+
       </div>
     </div>
   );
@@ -869,17 +869,26 @@ function NearbyProviders({ event, onClose }) {
 
   // Merge: DB providers first (they have ratings), then OSM — deduplicated by name
   const merged = useMemo(() => {
-    const dbNames = new Set(dbProviders.map(p => (p.provider || "").toLowerCase()));
-    const osmFiltered = osmMechanics.filter(m => !dbNames.has(m.name.toLowerCase()));
+    // Index DB providers by lowercased name
+    const dbByName = {};
+    dbProviders.forEach(p => { dbByName[(p.provider || "").toLowerCase()] = p; });
 
-    const allDb = dbProviders.map(p => ({ ...p, source: p.userAdded ? "user" : "db" }));
-    const combined = [...allDb, ...osmFiltered];
+    // OSM is the source of truth for location/distance; overlay DB ratings if matched
+    const osmEnriched = osmMechanics.map(m => {
+      const db = dbByName[m.name.toLowerCase()];
+      return db
+        ? { ...m, avgRating: db.avgRating, reviewCount: db.reviewCount, providerId: db.providerId, source: "osm" }
+        : { ...m, source: "osm" };
+    });
 
-    // Sort: rated first, then by distance
-    return combined.sort((a, b) => {
-      const aRated = (a.reviewCount > 0 || a.rating > 0) ? 0 : 1;
-      const bRated = (b.reviewCount > 0 || b.rating > 0) ? 0 : 1;
-      if (aRated !== bRated) return aRated - bRated;
+    // DB providers with NO OSM match → only these are truly "user added"
+    const osmNames = new Set(osmMechanics.map(m => m.name.toLowerCase()));
+    const dbOnly = dbProviders
+      .filter(p => !osmNames.has((p.provider || "").toLowerCase()))
+      .map(p => ({ ...p, name: p.provider, source: "user" }));
+
+    // Sort by distance only (entries without a distance go last)
+    return [...osmEnriched, ...dbOnly].sort((a, b) => {
       if (a.distance != null && b.distance != null) return a.distance - b.distance;
       if (a.distance != null) return -1;
       if (b.distance != null) return 1;
@@ -942,7 +951,7 @@ function NearbyProviders({ event, onClose }) {
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div style={{ fontSize:11, color:"#555", textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>
-                {merged.length} mechanic{merged.length !== 1 ? "s" : ""} · sorted by rating then distance
+                {merged.length} mechanic{merged.length !== 1 ? "s" : ""} · sorted by distance
               </div>
               {merged.map((p, i) => <ProviderCard key={p.id || p.providerId || i} provider={p}/>)}
             </div>
