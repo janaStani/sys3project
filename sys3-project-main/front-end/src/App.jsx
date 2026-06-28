@@ -1,4 +1,6 @@
-import { Component } from "react";
+import { Component } from "react";         // base class App uses to be a react class component
+
+// all page components
 import About from "./CustomComponents/about";
 import MyCar from "./CustomComponents/MyCar";
 import Car from "./CustomComponents/car";
@@ -6,13 +8,15 @@ import Mechanic from "./CustomComponents/Mechanic";
 import History from "./CustomComponents/History";
 import SignupView from "./CustomComponents/SignupView";
 import LoginView from "./CustomComponents/LoginView";
-import axios from "axios";
-import axiosAuth from "./Utils/axiosAuth";
-import { API_URL } from "./Utils/Configuration";
+// public calls, HTTP requests, comm between back and front end, react sends/gets data from the express server
+import axios from "axios";                         
+import axiosAuth from "./Utils/axiosAuth";         // auth calls, returns user specific data
+import { API_URL } from "./Utils/Configuration";  // backend's address, so it can use it in all axios calls, so it knows where to send requests
 import "./App.css";
 
-const PROTECTED_PAGES = ["MY_CAR", "CAR", "MECHANIC", "HISTORY"];
+const PROTECTED_PAGES = ["MY_CAR", "CAR", "MECHANIC", "HISTORY"];  // pages only when user is logged in
 
+// same template filled in diff for individual items on navbar
 function NavLink({ onClick, children, danger, active }) {
   return (
     <div
@@ -27,21 +31,20 @@ function NavLink({ onClick, children, danger, active }) {
 class App extends Component {
   state = {
     currentPage:    "MY_CAR",
-    user:           null,
-    sessionChecked: false,
-    selectedProvider: null,
+    user:           null,       // wether user is logged in
+    sessionChecked: false,      // finish checking login status
     cars:           [],
     allScheduled:   {},
-    serviceLog:     [],
-    garageLoaded:   false,
+    serviceLog:     [],         // completed service
+    garageLoaded:   false,      
     garageError:    "",
   };
 
   componentDidMount() {
-    this.checkSession();
+    this.checkSession();        // is user already logged in? call checkSession
   }
 
-  checkSession = async () => {
+  checkSession = async () => {     // pause until server responds
     try {
       const { data } = await axios.get(`${API_URL}/users/session`, { withCredentials:true });
       const user = data.logged_in ? data.user : null;
@@ -49,16 +52,17 @@ class App extends Component {
         if (user) this.loadGarage();
       });
     } catch {
-      this.setState({ sessionChecked:true, currentPage: "MY_CAR" });
+      this.setState({ sessionChecked:true, currentPage: "MY_CAR" }); // if the request fails, show My Car, just without a user
     }
   };
 
+  // fetch logged in user data from backend
   loadGarage = () => {
-    axiosAuth.get(`${API_URL}/cars`)
+    axiosAuth.get(`${API_URL}/cars`)     // load cars
       .then(res => {
         const loaded = res.data || [];
-        const sched  = {};
-        loaded.forEach(c => {
+        const sched  = {};                  // maps each cars id to its scheduled services data
+        loaded.forEach(c => {              // for every car c
           sched[c.id] = c.scheduled
             ? typeof c.scheduled === "string" ? JSON.parse(c.scheduled) : c.scheduled
             : {};

@@ -64,7 +64,7 @@ export const CAR_MODELS = [
         engine: ["2.3L inline-4", "2.5L inline-4"],
         drivetrain: "RWD",
         consumption: "10 – 13L",
-        image: "https://lh6.googleusercontent.com/proxy/x09KFrIDiWCZ2hA3ctI8SgiIMEsKYV3IyVww-VtvknpFOdR4MyUK1v8v_NL8zWdgSY2nQGSSU7rFqjfjtuDPiAVYEpRf7QRCbeP9MNDR0iVuHYtR3TUj0MMrjyuCwr8oS_P5c7bCmg8fEMZbjHaTqIu1Hal_PA"
+        image: "https://hips.hearstapps.com/hmg-prod/images/bmw-m-party-web-2-1633454516.jpg"
       },
       {
         generation: "E36", yearStart: 1992, yearEnd: 1999,

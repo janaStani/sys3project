@@ -168,7 +168,7 @@ function Field({ label, children }) {
 
 function Badge({ text, gold, green }) {
   return (
-    <span style={{ fontSize:10, borderRadius:20, padding:"2px 8px", background:gold?"#1e1a08":green?"#0e1e0a":"#1e2028", color:gold?"#e0a820":green?"#639922":"#888", border:`1px solid ${gold?"#4a3a10":green?"#1a4a0a":"#252830"}` }}>
+    <span style={{ display: "inline-flex", fontSize:10, borderRadius:20, padding:"2px 8px", background:gold?"#1e1a08":green?"#0e1e0a":"#1e2028", color:gold?"#e0a820":green?"#639922":"#888", border:`1px solid ${gold?"#4a3a10":green?"#1a4a0a":"#252830"}` }}>
       {text}
     </span>
   );

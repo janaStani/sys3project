@@ -3,25 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />  <!--make responsive on mobile, scale properly-->
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="CarCare App" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
-      crossorigin="anonymous"
-    />
     <title>CarCare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-      crossorigin="anonymous"
-    ></script>
-    <script type="module" src="/src/index.jsx"></script>
+    
+    <!-- where entire React app gets rendered, when app starts react finds it and fills it in with the components-->
+    <div id="root"></div>    
+
+    <script type="module" src="/src/index.jsx"></script>  <!--JS entry point-->
   </body>
 </html>
+
+<!-- 
+entry point of the entire React app, loads this file first then build everything
+its a single page application one HTML page and JS swaps the content inside
+vite takes this file as template, adds the compiled js, css references into it and outputs
+it to the build folder
+-->
