@@ -168,7 +168,7 @@ function Field({ label, children }) {
 
 function Badge({ text, gold, green }) {
   return (
-    <span style={{ display: "inline-flex", fontSize:10, borderRadius:20, padding:"2px 8px", background:gold?"#1e1a08":green?"#0e1e0a":"#1e2028", color:gold?"#e0a820":green?"#639922":"#888", border:`1px solid ${gold?"#4a3a10":green?"#1a4a0a":"#252830"}` }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize:10, borderRadius:20, padding:"2px 8px", background:gold?"#1e1a08":green?"#0e1e0a":"#1e2028", color:gold?"#e0a820":green?"#639922":"#888", border:`1px solid ${gold?"#4a3a10":green?"#1a4a0a":"#252830"}` }}>
       {text}
     </span>
   );
@@ -1348,7 +1348,7 @@ function CarCard({ car, serviceLog, onDelete, onEdit, scheduled, onToggle, onDat
 
 function MyCar({
   cars, allScheduled, serviceLog, garageLoaded, garageError,
-  onAddCar, onDeleteCar, onEdit, onRefreshCars, onToggle, onDate, onComplete,
+  onAddCar, onDeleteCar, onEdit, onToggle, onDate, onComplete,
   onClearError, onServiceLogged, onServiceLogRemoved, onScheduleNext, user
 }) {
   console.log("MyCar props - onEdit:", onEdit);
@@ -1384,11 +1384,6 @@ function MyCar({
       // Update the car in the parent state
       if (onEdit) {
         onEdit(res.data);
-      }
-        
-      // Also refresh the entire list to ensure consistency
-      if (onRefreshCars) {
-        onRefreshCars();
       }
         
       setShowEditModal(false);
