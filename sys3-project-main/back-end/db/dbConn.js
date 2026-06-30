@@ -95,6 +95,8 @@ if (DB_TYPE === 'sqlite') {
         console.log('Added pricePaid column to ServiceLog');
     }
     if (!slCols.includes('notes')) {
+        // Notes already exists, but if it doesn't:
+        // sqlite.exec('ALTER TABLE ServiceLog ADD COLUMN notes TEXT');
         console.log('notes column already exists');
     }
 
@@ -183,6 +185,16 @@ if (DB_TYPE === 'sqlite') {
         [carId, userId]
     );
 
+
+    DB.updateCar = (carId, userId, make, model, year, type, mileage, fuelType) => {
+        console.log("DB.updateCar called with:", { carId, userId, make, model, year, type, mileage, fuelType });
+        const sql = `
+            UPDATE Car 
+            SET make = ?, model = ?, year = ?, style = ?, mileage = ?, fuelType = ?
+            WHERE carId = ? AND userId = ?
+        `;
+        return query(sql, [make, model, year, type, mileage, fuelType, carId, userId]);
+    };
 
     DB.saveScheduled = (carId, userId, scheduled) => query(
         'UPDATE Car SET scheduled = ? WHERE carId = ? AND userId = ?',
