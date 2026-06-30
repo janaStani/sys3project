@@ -2,6 +2,4 @@ body {
   margin: 0;                    /*window is filled edge to edge*/
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  background: #0d0f12;
 }

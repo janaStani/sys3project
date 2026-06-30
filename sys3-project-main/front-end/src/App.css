@@ -2,7 +2,7 @@
 
 #APP {
   background: #0d0f12;
-  min-height: 100vh;
+  min-height: 100vh;    /* at least full viewport height */
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
@@ -15,10 +15,10 @@
   height: 56px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 100;    /*sits above page ontent*/
 }
 
-.navbar-brand {
+.navbar-brand {  /*logo text*/
   font-family: 'Bebas Neue', sans-serif;
   font-size: 24px;
   letter-spacing: 0.1em;
@@ -41,7 +41,7 @@
   outline: none;
 }
 
-.navbar-logo {
+.navbar-logo {  /*logo image*/
     width: 32px;
     height: 32px;
     object-fit: contain;
@@ -96,29 +96,22 @@
 }
 
 .nav-link--active {
-  color: #e0a820;      /* slightly lighter */
   background: transparent;
   border: none;
   font-weight: 500;
 }
 
 .nav-link,
-.nav-link:link,
-.nav-link:visited,
 .nav-link:hover,
 .nav-link:active,
 .nav-link:focus {
-  text-decoration: none;
   outline: none;
 }
 
 .nav-link--active,
-.nav-link--active:link,
-.nav-link--active:visited,
 .nav-link--active:hover,
 .nav-link--active:focus,
 .nav-link--active:active {
   color: #9e8959;
-  text-decoration: none;
   outline: none;
 }

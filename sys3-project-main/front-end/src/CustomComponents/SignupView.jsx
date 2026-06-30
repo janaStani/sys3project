@@ -8,7 +8,7 @@ class SignupView extends React.Component {
         this.state = {
             fields:       { username: "", email: "", password: "", name: "", surname: "", zipcode: "" },
             status:       { success: null, msg: "" },
-            loading:      false,
+            loading:      false,         //  signup request is in progress
             showPassword: false,
         };
     }
