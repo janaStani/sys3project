@@ -1,3 +1,6 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:
+
+# auto-generated file tells search crawlers what they can access
+# not used even if used allows everything

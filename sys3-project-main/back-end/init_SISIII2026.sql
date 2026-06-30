@@ -1,6 +1,6 @@
 -- Initialization SQL for SISIII2026_89221066
--- Creates the schema for the current app and preserves Car.scheduled for existing frontend behavior.
--- NOTE: run this in the database `SISIII2026_89221066` (select it first in phpMyAdmin).
+-- file that it was used initially to make the db based on the reminar report
+-- the live database differs from this initial version
 
 USE `SISIII2026_89221066`;
 
@@ -15,7 +15,6 @@ DROP TABLE IF EXISTS `Car`;
 DROP TABLE IF EXISTS `User`;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- Users
 CREATE TABLE IF NOT EXISTS `User` (
   userId INT(11) NOT NULL AUTO_INCREMENT,
   name VARCHAR(255) NOT NULL,
@@ -28,7 +27,6 @@ CREATE TABLE IF NOT EXISTS `User` (
   PRIMARY KEY (userId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Cars
 CREATE TABLE IF NOT EXISTS `Car` (
   carId INT(11) NOT NULL AUTO_INCREMENT,
   userId INT(11) NOT NULL,
@@ -44,7 +42,6 @@ CREATE TABLE IF NOT EXISTS `Car` (
   CONSTRAINT fk_car_user FOREIGN KEY (userId) REFERENCES `User`(userId) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Task
 CREATE TABLE IF NOT EXISTS `Task` (
   taskId INT(11) NOT NULL AUTO_INCREMENT,
   item VARCHAR(255) NOT NULL,
@@ -62,7 +59,6 @@ CREATE TABLE IF NOT EXISTS `Task` (
   CONSTRAINT fk_task_user FOREIGN KEY (userId) REFERENCES `User`(userId) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Service providers
 CREATE TABLE IF NOT EXISTS `ServiceProvider` (
   providerId INT(11) NOT NULL AUTO_INCREMENT,
   provider VARCHAR(255) NOT NULL,
@@ -81,7 +77,6 @@ CREATE TABLE IF NOT EXISTS `ServiceProvider` (
   CONSTRAINT fk_provider_task FOREIGN KEY (taskId) REFERENCES `Task`(taskId) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Schedule
 CREATE TABLE IF NOT EXISTS `Schedule` (
   scheduleId INT(11) NOT NULL AUTO_INCREMENT,
   scheduledAt TIMESTAMP NULL,
@@ -105,7 +100,6 @@ CREATE TABLE IF NOT EXISTS `Schedule` (
   CONSTRAINT fk_schedule_user FOREIGN KEY (userId) REFERENCES `User`(userId) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- History
 CREATE TABLE IF NOT EXISTS `History` (
   historyId INT(11) NOT NULL AUTO_INCREMENT,
   item VARCHAR(255),
@@ -132,7 +126,6 @@ CREATE TABLE IF NOT EXISTS `History` (
   CONSTRAINT fk_history_provider FOREIGN KEY (providerId) REFERENCES `ServiceProvider`(providerId) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Expenses
 CREATE TABLE IF NOT EXISTS `Expenses` (
   expenseId INT(11) NOT NULL AUTO_INCREMENT,
   amount FLOAT NOT NULL,
@@ -148,9 +141,5 @@ CREATE TABLE IF NOT EXISTS `Expenses` (
   CONSTRAINT fk_expense_user FOREIGN KEY (userId) REFERENCES `User`(userId) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Optional sample provider
--- NOTE: This INSERT requires that `ServiceProvider` already exists with the `provider` column.
--- If you previously created the table from an older version, use DESCRIBE ServiceProvider
--- and recreate or ALTER the table before running this insert.
 INSERT IGNORE INTO `ServiceProvider` (`provider`, `priceRange`, `rating`, `location`)
 VALUES ('Example Auto Service', 'Medium', 4.5, '123 Main St');
